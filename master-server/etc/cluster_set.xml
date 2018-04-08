@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<system>
+    <cluster>
+        <describe>主服务</describe>
+        <host>127.0.0.1</host>
+        <port>8080</port>
+        <node>
+            <name>node1</name>
+            <host>127.0.0.1</host>
+            <account>pirate</account>
+            <password>hypriot</password>
+            <server_path>/path/to/slave/server</server_path>
+        </node>
+        <node>
+            <name>node2</name>
+            <host>10.42.0.137</host>
+            <account>pirate</account>
+            <password>hypriot</password>
+            <server_path>/path/to/slave/server</server_path>
+        </node>
+    </cluster>
+</system>
