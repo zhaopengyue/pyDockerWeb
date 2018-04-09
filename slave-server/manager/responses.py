@@ -263,6 +263,11 @@ class Sys(Resource):
         return message
 
 
+@APP.route('/healthy/')
+def check_healthy():
+    return 'ok'
+
+
 API.add_resource(Containers, '/container/_all/', endpoint='containers')
 API.add_resource(Container, '/container/', endpoint='container')
 API.add_resource(Images, '/image/_all/', endpoint='images')

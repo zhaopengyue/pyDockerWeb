@@ -5,9 +5,11 @@
 import random
 import string
 import sys
+import requests
 import threading
 from socket import *
-
+sys.path.append('..')
+from etc.sys_set import PRIVATE_REGISTRY_PORT, IMAGE_SERVICE_PORT_VAR
 import time
 
 from manager.tools import md5_salt
@@ -32,8 +34,13 @@ class SlaveHeartbeats(threading.Thread):
             if PATTERN_HOST_OBJ.match(SERVICE_HOST_VAR) is None:
                 raise KeyError('Host error.The host may be like "127.0.0.1"')
             try:
-                s = socket(AF_INET, SOCK_DGRAM)
-                s.connect((SERVICE_HOST_VAR, HEARTBEAT_PORT_VAR))
+                # 检测私有镜像服务是否在线
+                if self.check_server():
+                    s = socket(AF_INET, SOCK_DGRAM)
+                    s.connect((SERVICE_HOST_VAR, HEARTBEAT_PORT_VAR))
+                else:
+                    time.sleep(2)
+                    continue
             except gaierror, e:
                 print "Address-related error connecting to server: %s" % e
                 sys.exit(1)
@@ -51,3 +58,21 @@ class SlaveHeartbeats(threading.Thread):
                 s.close()
                 sys.exit(1)
             time.sleep(2)
+
+    @staticmethod
+    def check_server():
+        """ 检查私有仓库及镜像响应服务运行状态
+
+        :return:bool值
+        """
+        status = False
+        registry_url = 'http://127.0.0.1:' + str(PRIVATE_REGISTRY_PORT)
+        response_url = 'http://127.0.0.1:' + str(IMAGE_SERVICE_PORT_VAR) + '/healthy/'
+        try:
+            rg_obj = requests.get(registry_url)
+            rs_obj = requests.get(response_url)
+            if rg_obj.status_code == 200 and rs_obj.status_code == 200:
+                status = True
+        except requests.ConnectionError:
+            pass
+        return status

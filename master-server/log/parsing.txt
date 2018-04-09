@@ -1,5 +1,5 @@
-2018-04-08 19:09:43,723 INFO: /home/zhao/program/python/django/student-docker/master-server/etc/cluster_set.xml 格式校验成功
-2018-04-08 19:09:43,724 INFO: 开始读取文件配置
-2018-04-08 19:09:43,724 INFO: cluster_set.xml文件配置读取成功
-2018-04-08 19:09:43,724 INFO: 开始写入文件
-2018-04-08 19:09:43,725 INFO: 文件写入完成
+2018-04-09 15:52:57,945 INFO: /home/zhao/program/python/django/student-docker/pyDockerWeb/master-server/etc/cluster_set.xml 格式校验成功
+2018-04-09 15:52:57,945 INFO: 开始读取文件配置
+2018-04-09 15:52:57,946 INFO: cluster_set.xml文件配置读取成功
+2018-04-09 15:52:57,946 INFO: 开始写入文件
+2018-04-09 15:52:57,947 INFO: 文件写入完成

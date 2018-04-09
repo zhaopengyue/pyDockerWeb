@@ -10,9 +10,12 @@ from socket import *
 
 import time
 
+import requests
+
 from manager.tools import md5_salt
 sys.path.append('..')
 from etc.sys_set import SERVICE_HOST_VAR
+from etc.sys_set import SLAVE_SERVICE_PORT_VAR
 from etc.sys_set import HEARTBEAT_PORT_VAR
 from etc.core_var import PATTERN_HOST_OBJ
 
@@ -39,8 +42,12 @@ class SlaveHeartbeats(threading.Thread):
             if PATTERN_HOST_OBJ.match(SERVICE_HOST_VAR) is None:
                 raise KeyError('Host error.The host may be like "127.0.0.1"')
             try:
-                s = socket(AF_INET, SOCK_DGRAM)
-                s.connect((SERVICE_HOST_VAR, HEARTBEAT_PORT_VAR))
+                if self.check_server():
+                    s = socket(AF_INET, SOCK_DGRAM)
+                    s.connect((SERVICE_HOST_VAR, HEARTBEAT_PORT_VAR))
+                else:
+                    time.sleep(2)
+                    continue
             except gaierror, e:
                 print "Address-related error connecting to server: %s" % e
                 sys.exit(1)
@@ -58,3 +65,19 @@ class SlaveHeartbeats(threading.Thread):
                 s.close()
                 sys.exit(1)
             time.sleep(2)
+
+    @staticmethod
+    def check_server():
+        """ 检查从节点响应服务运行状态
+
+        :return:
+        """
+        status = False
+        response_url = 'http://127.0.0.1:' + str(SLAVE_SERVICE_PORT_VAR) + '/healthy/'
+        try:
+            rs_obj = requests.get(response_url)
+            if rs_obj.status_code == 200:
+                status = True
+        except requests.ConnectionError:
+            pass
+        return status

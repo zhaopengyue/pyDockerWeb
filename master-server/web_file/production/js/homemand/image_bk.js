@@ -1,8 +1,6 @@
-var maxLength = 30;
-
 function make_action(node, image_id) {
-    var set_html = '<div class="dropdown">\n' +
-        '<button href="#" class="btn btn-default dropdown-toggle btn-xs" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-wrench"></i></button>\n' +
+    var set_html = '<span class="dropdown">\n' +
+        '<a href="#" class="btn btn-default dropdown-toggle btn-xs" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-wrench"></i></a>\n' +
         '<ul class="dropdown-menu" role="menu">\n' +
         '<li><a onclick="remove(' + '\'' + node + '\',' + '\'' + image_id + '\'' + ')"><i class="fa fa-scissors">&nbsp;&nbsp;&nbsp;&nbsp;</i>删除</a>\n' +
         '</li>\n' +
@@ -12,7 +10,7 @@ function make_action(node, image_id) {
         // '<li><a><i class="fa fa-floppy-o">&nbsp;&nbsp;&nbsp;&nbsp;</i>构建</a>\n' +
         // '</li>\n' +
         '</ul>\n' +
-        '</div>';
+        '</span>';
     return set_html;
 }
 // 更新节点选择下拉框
@@ -92,34 +90,6 @@ function action(node, image_id, action, args) {
         }
     });
 }
-
-//切换显示备注信息，显示部分或者全部
-function changeShowRemarks(obj){    //obj是td -> a
-    var obj_parent = $(obj).parent();
-    var content = $(obj_parent).attr("content");
-    if(content !== null && content !== ''){
-        if($(obj_parent).attr("isDetail") === 'true'){//当前显示的是详细备注，切换到显示部分
-            //$(obj).removeAttr('isDetail');//remove也可以
-            $(obj_parent).attr('isDetail',false);
-            $(obj_parent).html(getPartialRemarksHtml(content));
-        }else{//当前显示的是部分备注信息，切换到显示全部
-            $(obj_parent).attr('isDetail',true);
-            $(obj_parent).html(getTotalRemarksHtml(content));
-        }
-    }
-}
-
-//部分备注信息
-function getPartialRemarksHtml(remarks){
-    return remarks.substr(0,10) + '...&nbsp;&nbsp;<a href="javascript:void(0);" onclick="changeShowRemarks(this)"><b>more</b></a>';
-}
-
-//全部备注信息
-function getTotalRemarksHtml(remarks){
-    return remarks + '&nbsp;&nbsp;<a href="javascript:void(0);" onclick="changeShowRemarks(this)"><b>close</b></a>';
-}
-
-
 function init_form(cluster_id) {
     $.ajax({
             data: JSON.stringify({'cluster_id': cluster_id}),
@@ -144,31 +114,13 @@ function init_form(cluster_id) {
                             { data: 'status' }
                         ],
                         columnDefs: [{
-                                targets: 0,
-                                render: function (data, type, row, meta) {
-                                    return make_action(row['node'], row['tag']);
-                                }
-                            },
-                            {
-                                targets: 3,
-                                type: "date",
-                                render: function (data, type, row, meta) {
-                                    if(data.length > maxLength) {
-                                        return getPartialRemarksHtml(data);
-                                    }
-                                    else {
-                                        return data;
-                                    }
-                                }
-                            },
-                            {orderable: false, targets: 0}
-                        ],
-                        createdRow: function (row, data, dataIndex) {
-                            if(data['tag'].length > maxLength) {
-                                $(row).children('td').eq(3).children('a').attr('onclick', 'changeShowRemarks(this)');
+                            targets: 0,
+                            render: function (data, type, row, meta) {
+                                return make_action(row['node'], row['tag']);
                             }
-                            $(row).children('td').eq(3).attr('content', data['tag'])
-                        }
+                        },
+                            {orderable: false, targets: 0}
+                        ]
                     })
                 }
             }

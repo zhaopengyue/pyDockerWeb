@@ -254,7 +254,7 @@ def container_info():
                 'create': container.get('message').get('created'),
                 'status': status
             })
-    return jsonify({'message': info, 'status': True})
+    return jsonify({'data': info, 'status': True})
 
 
 @app.route('/container/operator/', methods=['POST'])

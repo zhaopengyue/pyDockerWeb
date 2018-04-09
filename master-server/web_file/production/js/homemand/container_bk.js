@@ -1,8 +1,6 @@
-var maxLength = 20;
-
 function make_action(node, container_id) {
-    var set_html = '<div class="dropdown">\n' +
-        '<button href="#" class="btn btn-default dropdown-toggle btn-xs" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-wrench"></i></button>\n' +
+    var set_html = '<span class="dropdown" style="overflow:visible">\n' +
+        '<a href="#" style="z-index:999999" class="btn btn-default dropdown-toggle btn-xs" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-wrench"></i></a>\n' +
         '<ul class="dropdown-menu" role="menu">\n' +
         '<li><a onclick="action(' + '\'' + node + '\',' + '\'' + container_id + '\',' + '\'restart\',' + '{}' + ')"><i class="fa fa-rotate-right">&nbsp;&nbsp;&nbsp;&nbsp;</i>重启</a>\n' +
         '</li>\n' +
@@ -24,7 +22,7 @@ function make_action(node, container_id) {
         '<li><a onclick="action(' + '\'' + node + '\',' + '\'' + container_id + '\',' + '\'logs\',' + '{}' + ')"><i class="fa fa-file-text-o">&nbsp;&nbsp;&nbsp;&nbsp;</i>日志</a>\n' +
         '</li>\n' +
         '</ul>\n' +
-        '</div>';
+        '</span>';
     return set_html;
 }
 // 更新节点选择下拉框
@@ -80,11 +78,10 @@ function create() {
 function create_submit() {
     var cluster_id = window.location.host.split(':')[0];
     var cmd = $("#txt_cmd").val();
-    var total_cmd = 'docker create ' + cmd
     var node_info = $("#modal-create-select option:selected").val();
     $("#modal-create").modal('hide');
     $.ajax({
-        data: JSON.stringify({'cluster_id': cluster_id, 'node': node_info, 'cmd': total_cmd}),
+        data: JSON.stringify({'cluster_id': cluster_id, 'node': node_info, 'cmd': cmd}),
         dataType: 'json',
         type: 'POST',
         contentType: 'application/json; charset=UTF-8',
@@ -136,33 +133,6 @@ function action(node, container_id, action, args) {
         }
     });
 }
-
-//切换显示备注信息，显示部分或者全部
-function changeShowRemarks(obj){    //obj是td -> a
-    var obj_parent = $(obj).parent();
-    var content = $(obj_parent).attr("content");
-    if(content !== null && content !== ''){
-        if($(obj_parent).attr("isDetail") === 'true'){//当前显示的是详细备注，切换到显示部分
-            //$(obj).removeAttr('isDetail');//remove也可以
-            $(obj_parent).attr('isDetail',false);
-            $(obj_parent).html(getPartialRemarksHtml(content));
-        }else{//当前显示的是部分备注信息，切换到显示全部
-            $(obj_parent).attr('isDetail',true);
-            $(obj_parent).html(getTotalRemarksHtml(content));
-        }
-    }
-}
-
-//部分备注信息
-function getPartialRemarksHtml(remarks){
-    return remarks.substr(0,10) + '...&nbsp;&nbsp;<a href="javascript:void(0);" onclick="changeShowRemarks(this)"><b>more</b></a>';
-}
-
-//全部备注信息
-function getTotalRemarksHtml(remarks){
-    return remarks + '&nbsp;&nbsp;<a href="javascript:void(0);" onclick="changeShowRemarks(this)"><b>close</b></a>';
-}
-
 function init_form(cluster_id) {
     $.ajax({
             data: JSON.stringify({'cluster_id': cluster_id}),
@@ -175,7 +145,7 @@ function init_form(cluster_id) {
                 if(status && resful['status']) {
                     $('#container-node-info').DataTable({
                         data: resful['message'],
-                        // autoWidth: true,
+                        autoWidth: true,
                         columns: [
                             { data: null },
                             { data: 'short_id' },
@@ -186,48 +156,21 @@ function init_form(cluster_id) {
                             { data: 'create' },
                             { data: 'status' }
                         ],
-                        retrieve:true,
                         columnDefs: [{
-                                targets: 0,
-                                render: function (data, type, row, meta) {
-                                    return make_action(row['node'], row['short_id']);
-                                }
-                            },
-                            {
-                                targets: 4,
-                                type: "date",
-                                render: function (data, type, row, meta) {
-                                    if(row['image'].length > maxLength) {
-                                        return getPartialRemarksHtml(row['image']);
-                                    }
-                                    else {
-                                        return row['image'];
-                                    }
-                                }
-                            },
-                            {
-                                targets: 6,
-                                type: "date",
-                                render: function (data, type, row, meta) {
-                                    return data.substr(0, 19);
-                                }
-                            },
-                            {orderable: false, targets: 0}
-                        ],
-                        createdRow: function (row, data, dataIndex) {
-                            if(data['image'].length > maxLength) {
-                                $(row).children('td').eq(4).children('a').attr('onclick', 'changeShowRemarks(this)');
+                            targets: 0,
+                            render: function (data, type, row, meta) {
+                                return make_action(row['node'], row['short_id']);
                             }
-                            $(row).children('td').eq(4).attr('content', data['image'])
-                        }
+                        },
+                            {orderable: false, targets: 0}
+                        ]
                     })
                 }
             }
         });
 }
-
 function mk_form(cluster_id) {
-    if ($("#container-node-info").hasClass('dataTable'))
+    if ($('#container-node-info').hasClass('dataTable'))
     {
         var dttable = $('#container-node-info').dataTable();
         dttable.fnClearTable(); //清空一下table

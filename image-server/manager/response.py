@@ -56,6 +56,11 @@ class ImageRegistryResponse(Resource):
         return message
 
 
+@APP.route('/healthy/')
+def check_healthy():
+    return 'ok'
+
+
 API.add_resource(ImageResponse, '/image_server/', endpoint='images')
 API.add_resource(ImageRegistryResponse, '/image_registry_server/', endpoint='images_registry')
 

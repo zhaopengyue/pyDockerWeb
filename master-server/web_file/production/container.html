@@ -265,7 +265,12 @@
                         </div>
                         <div class="form-group">
                             <label for="txt_cmd">create命令</label>
-                            <input type="text" name="txt_cmd" class="form-control" id="txt_cmd" placeholder="docker create -it ubuntu /bin/bash">
+                            <div class="input-group">
+                                <span class="input-group-btn">
+                                    <button type="button" class="btn btn-dark" disabled>docker create</button>
+                                </span>
+                                <input type="text" name="txt_cmd" class="form-control" id="txt_cmd" placeholder="-it ubuntu /bin/bash">
+                            </div>
                         </div>
                     </div>
                 </form>
