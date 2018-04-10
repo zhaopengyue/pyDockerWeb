@@ -254,7 +254,7 @@ def container_info():
                 'create': container.get('message').get('created'),
                 'status': status
             })
-    return jsonify({'data': info, 'status': True})
+    return jsonify({'message': info, 'status': True})
 
 
 @app.route('/container/operator/', methods=['POST'])
@@ -635,6 +635,30 @@ def node_image_server_registry():
     return jsonify({'message': info, 'status': True})
 
 
+@app.route('/node/image_harbor_registry/', methods=['POST'])
+def node_image_server_harbor():
+    """ 返回镜像服务器私有仓库harbor列表
+
+        该方法仅支持harbor
+
+        请求方式: POST
+        请求携带参数: cluster_id
+                    image_server: 私有镜像仓库ip
+
+    :return:
+    """
+    rq_args = request.get_json()
+    cluster_id = rq_args.get('cluster_id')
+    all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
+    if cluster_id not in all_cluster_id:
+        _logger.write('node_image_server_registry: ' + str(cluster_id) + ' is illegal')
+        return jsonify({'message': str(cluster_id) + ' is illegal'})
+    image_server = rq_args.get('image_server')
+    if not image_server:
+        _logger.write('node_image_server_registry: ' + str(image_server) + ' is illegal')
+        return jsonify({'message': 'image server is error', 'status': False})
+    info = _image.get_image_server_harbor(image_server)
+    return jsonify({'message': info, 'status': True})
 # @app.route('/node/server_list/', methods=['POST'])
 # def get_server_list():
 #     """ 返回镜像服务器列表

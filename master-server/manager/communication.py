@@ -591,6 +591,37 @@ class Image(object):
         return exec_result
 
     @staticmethod
+    def get_image_server_harbor(image_server):
+        """ 获取harbor镜像列表
+
+        :param image_server:
+        :return:
+        """
+        image_server_port = None
+        image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
+        if image_server not in image_server_status or not image_server_status.get(image_server).get('status'):
+            _logger.write('镜像服务器Host: \'' + str(image_server) + '\'无效或本Host不可用', level='warn')
+            return {'message': 'image server unavailable', 'status': False}
+        for server in IMAGE_SERVER_LIST:
+            if server[0] == image_server:
+                image_server_port = server[2]
+        if image_server_port is None:
+            return {'message': 'image server not allowed', 'status': False}
+        rq_url = _root_url.format(
+            host=image_server,
+            port=image_server_port,
+            root_path='image_harbor_server',
+            type_path=''
+        )
+        try:
+            rq_obj = requests.get(rq_url)
+            exec_result = json.loads(rq_obj.text)
+        except ConnectionError:
+            _logger.write(str(image_server) + '连接失败', 'warn')
+            exec_result = {'message': 'image server connect fail', 'status': False}
+        return exec_result
+
+    @staticmethod
     def download_image_tar(image_server, download_to_host, repository):
         """ 下载镜像
 

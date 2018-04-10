@@ -9,9 +9,9 @@ THE_MACHINE_IP = '0.0.0.0'
 IMAGE_SERVICE_PORT_VAR = 14000
 
 # ---------------------------镜像下载服务--------------------------- #
-# !镜像服务与从节点通信端口(以废弃)
+# !镜像服务与从节点通信端口(已废弃)
 SLAVE_UPLOAD_PORT = 13000
-# !私有镜像仓库监听端口
+# !私有镜像仓库监听端口(已废弃)
 PRIVATE_REGISTRY_PORT = 16000
 
 # ----------------------------心跳服务--------------------------- #
@@ -19,3 +19,8 @@ PRIVATE_REGISTRY_PORT = 16000
 HEARTBEAT_PORT_VAR = 10000
 # !主服务所在IP
 SERVICE_HOST_VAR = '127.0.0.1'
+
+# --------------------------harbor镜像仓库配置--------------------- #
+HARBOR_URL = 'http://127.0.0.1:80'
+HARBOR_USERNAME = None
+HARBOR_PASSWORD = None

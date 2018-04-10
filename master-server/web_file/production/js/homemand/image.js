@@ -1,7 +1,7 @@
 var maxLength = 30;
 
 function make_action(node, image_id) {
-    var set_html = '<div class="dropdown">\n' +
+    var set_html = '<div class="dropup">\n' +
         '<button href="#" class="btn btn-default dropdown-toggle btn-xs" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-wrench"></i></button>\n' +
         '<ul class="dropdown-menu" role="menu">\n' +
         '<li><a onclick="remove(' + '\'' + node + '\',' + '\'' + image_id + '\'' + ')"><i class="fa fa-scissors">&nbsp;&nbsp;&nbsp;&nbsp;</i>删除</a>\n' +
@@ -164,6 +164,7 @@ function init_form(cluster_id) {
                             {orderable: false, targets: 0}
                         ],
                         createdRow: function (row, data, dataIndex) {
+                            console.log(dataIndex);
                             if(data['tag'].length > maxLength) {
                                 $(row).children('td').eq(3).children('a').attr('onclick', 'changeShowRemarks(this)');
                             }

@@ -16,6 +16,7 @@ from manager.tools import md5_salt
 sys.path.append('..')
 from etc.sys_set import SERVICE_HOST_VAR
 from etc.sys_set import HEARTBEAT_PORT_VAR
+from etc.sys_set import HARBOR_URL
 from etc.core_var import PATTERN_HOST_OBJ
 
 
@@ -66,7 +67,10 @@ class SlaveHeartbeats(threading.Thread):
         :return:bool值
         """
         status = False
-        registry_url = 'http://127.0.0.1:' + str(PRIVATE_REGISTRY_PORT)
+        # 检测官方私有仓库(已停用)
+        # registry_url = 'http://127.0.0.1:' + str(PRIVATE_REGISTRY_PORT)
+        # 检测harbor仓库
+        registry_url = HARBOR_URL
         response_url = 'http://127.0.0.1:' + str(IMAGE_SERVICE_PORT_VAR) + '/healthy/'
         try:
             rg_obj = requests.get(registry_url)

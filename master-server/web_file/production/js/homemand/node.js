@@ -1,6 +1,6 @@
 var time = 3;
 var cluster_id = window.location.host.split(':')[0];
-var bool_image_server = false;
+var maxLength = 30;
 // 获取get变量
 function getQueryVariable(variable)
 {
@@ -8,7 +8,7 @@ function getQueryVariable(variable)
        var vars = query.split("&");
        for (var i=0;i<vars.length;i++) {
                var pair = vars[i].split("=");
-               if(pair[0] == variable){return pair[1];}
+               if(pair[0] === variable){return pair[1];}
        }
        return(false);
 }
@@ -298,13 +298,76 @@ function container(node) {
 //             }
 //         });
 // }
+// function init_form(image_server_node) {
+//     $.ajax({
+//             data: JSON.stringify({'cluster_id': cluster_id, 'image_server': image_server_node}),
+//             dataType: 'json',
+//             type: 'POST',
+//             contentType: 'application/json; charset=UTF-8',
+//             url: '/apis/node/image_server_registry/',
+//             sync: true,
+//             success: function (resful, status) {
+//                 if(status && resful['status']) {
+//                     $('#node-image-server-info').DataTable({
+//                         data: resful['message']['message'],
+//                         autoWidth: true,
+//                         columns: [
+//                             { data: 'repository' },
+//                             { data: 'tag' },
+//                             { data: null }
+//                         ],
+//                         columnDefs: [{
+//                             targets: 2,
+//                             render: function (data, type, row, meta) {
+//                                 var repository = row['repository'] + ':' + row['tag'];
+//                                 var to_host = getQueryVariable('node');
+//                                 var image_server = get_select_node();
+//                                 return '<button value=\"' + repository + '\" onclick=\"download(\'' + to_host +'\',\''+ repository + '\', \'' + image_server + '\')\" class=\"btn btn-default dropdown-toggle btn-xs\"><i class=\"fa fa-arrow-down\"></i></button>'
+//                             }
+//                         },
+//                             {orderable: false, targets: 2}
+//                         ]
+//                     })
+//                 }
+//                 else {
+//                     toastr.error(resful['message']);
+//                 }
+//             }
+//         });
+// }
+//切换显示备注信息，显示部分或者全部
+function changeShowRemarks(obj){    //obj是td -> a
+    var obj_parent = $(obj).parent();
+    var content = $(obj_parent).attr("content");
+    if(content !== null && content !== ''){
+        if($(obj_parent).attr("isDetail") === 'true'){//当前显示的是详细备注，切换到显示部分
+            //$(obj).removeAttr('isDetail');//remove也可以
+            $(obj_parent).attr('isDetail',false);
+            $(obj_parent).html(getPartialRemarksHtml(content));
+        }else{//当前显示的是部分备注信息，切换到显示全部
+            $(obj_parent).attr('isDetail',true);
+            $(obj_parent).html(getTotalRemarksHtml(content));
+        }
+    }
+}
+
+//部分备注信息
+function getPartialRemarksHtml(remarks){
+    return remarks.substr(0,10) + '...&nbsp;&nbsp;<a href="javascript:void(0);" onclick="changeShowRemarks(this)"><b>more</b></a>';
+}
+
+//全部备注信息
+function getTotalRemarksHtml(remarks){
+    return remarks + '&nbsp;&nbsp;<a href="javascript:void(0);" onclick="changeShowRemarks(this)"><b>close</b></a>';
+}
+// harbor 方式
 function init_form(image_server_node) {
     $.ajax({
             data: JSON.stringify({'cluster_id': cluster_id, 'image_server': image_server_node}),
             dataType: 'json',
             type: 'POST',
             contentType: 'application/json; charset=UTF-8',
-            url: '/apis/node/image_server_registry/',
+            url: '/apis/node/image_harbor_registry/',
             sync: true,
             success: function (resful, status) {
                 if(status && resful['status']) {
@@ -312,21 +375,42 @@ function init_form(image_server_node) {
                         data: resful['message']['message'],
                         autoWidth: true,
                         columns: [
-                            { data: 'repository' },
-                            { data: 'tag' },
+                            { data: 'name' },
+                            { data: 'pull_count' },
+                            { data: 'star_count' },
+                            { data: 'update_time' },
+                            { data: 'description' },
                             { data: null }
                         ],
                         columnDefs: [{
-                            targets: 2,
+                            targets: 5,
                             render: function (data, type, row, meta) {
-                                var repository = row['repository'] + ':' + row['tag'];
+                                var repository = row['name'];
                                 var to_host = getQueryVariable('node');
                                 var image_server = get_select_node();
                                 return '<button value=\"' + repository + '\" onclick=\"download(\'' + to_host +'\',\''+ repository + '\', \'' + image_server + '\')\" class=\"btn btn-default dropdown-toggle btn-xs\"><i class=\"fa fa-arrow-down\"></i></button>'
                             }
                         },
+                            {
+                                targets: 4,
+                                type: "date",
+                                render: function (data, type, row, meta) {
+                                    if(data.length > maxLength) {
+                                        return getPartialRemarksHtml(data);
+                                    }
+                                    else {
+                                        return data;
+                                    }
+                                }
+                            },
                             {orderable: false, targets: 2}
-                        ]
+                        ],
+                        createdRow: function (row, data, dataIndex) {
+                            if(data['description'].length > maxLength) {
+                                $(row).children('td').eq(3).children('a').attr('onclick', 'changeShowRemarks(this)');
+                            }
+                            $(row).children('td').eq(3).attr('content', data['description'])
+                        }
                     })
                 }
                 else {
