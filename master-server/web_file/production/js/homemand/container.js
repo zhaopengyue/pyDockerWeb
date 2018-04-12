@@ -1,7 +1,7 @@
 var maxLength = 20;
 
 function make_action(node, container_id) {
-    var set_html = '<div class="dropup">\n' +
+    var set_html = '<div class="btn-group">\n' +
         '<button href="#" class="btn btn-default dropdown-toggle btn-xs" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-wrench"></i></button>\n' +
         '<ul class="dropdown-menu" role="menu">\n' +
         '<li><a onclick="action(' + '\'' + node + '\',' + '\'' + container_id + '\',' + '\'restart\',' + '{}' + ')"><i class="fa fa-rotate-right">&nbsp;&nbsp;&nbsp;&nbsp;</i>重启</a>\n' +
@@ -186,6 +186,9 @@ function init_form(cluster_id) {
                             { data: 'create' },
                             { data: 'status' }
                         ],
+                          scrollY: "1000px",
+                        scrollCollapse: true,
+                        paging: true,
                         retrieve:true,
                         columnDefs: [{
                                 targets: 0,

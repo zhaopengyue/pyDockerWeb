@@ -34,7 +34,9 @@ $(document).ready(function () {
             if(status && resful['status']) {
                 $("#index-table-node").DataTable({
                     data: resful['message'],
-                    destroy: true
+                    destroy: true,
+                    scrollY: "1000px",
+                        scrollCollapse: true
                 })
             }
             else {

@@ -442,11 +442,22 @@ function download(to_host, image_name, image_server) {
         success: function (resful, status) {
             if(status && resful['status']) {
                 toastr.info(resful['message']['message'])
+                mk_form(cluster_id);
             }
             else
                 toastr.error(resful['message']['message'])
         }
     })
+}
+
+function mk_form(cluster_id) {
+    if ($('#node-image-server-info').hasClass('dataTable'))
+    {
+        var dttable = $('#node-image-server-info').dataTable();
+        dttable.fnClearTable(); //清空一下table
+        dttable.fnDestroy(); //还原初始化了的datatable
+    }
+    init_form(cluster_id);
 }
 
 $(document).ready(function () {

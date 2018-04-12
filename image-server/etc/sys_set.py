@@ -21,6 +21,6 @@ HEARTBEAT_PORT_VAR = 10000
 SERVICE_HOST_VAR = '127.0.0.1'
 
 # --------------------------harbor镜像仓库配置--------------------- #
-HARBOR_URL = 'http://127.0.0.1:80'
+HARBOR_URL = 'http://127.0.0.1:17000'
 HARBOR_USERNAME = None
 HARBOR_PASSWORD = None

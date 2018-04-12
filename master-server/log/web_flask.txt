@@ -1,1 +1,0 @@
-2018-04-10 20:31:21,359 INFO: node_image_server_registry: None is illegal
