@@ -5,13 +5,13 @@
 import random
 import string
 import sys
+import os
 import requests
 import threading
+import time
 from socket import *
 sys.path.append('..')
-from etc.sys_set import PRIVATE_REGISTRY_PORT, IMAGE_SERVICE_PORT_VAR
-import time
-
+from etc.sys_set import IMAGE_SERVICE_PORT_VAR
 from manager.tools import md5_salt
 sys.path.append('..')
 from etc.sys_set import SERVICE_HOST_VAR
@@ -21,6 +21,27 @@ from etc.core_var import PATTERN_HOST_OBJ
 
 
 class SlaveHeartbeats(threading.Thread):
+    @staticmethod
+    def get_hostname():
+        """ 获取主机hostname
+
+        :return:
+        """
+        os_sys = os.name
+        if os_sys == 'nt':
+            hostname = os.getenv('computername')
+            return hostname
+        elif os_sys == 'posix':
+            host = os.popen('hostname')
+            try:
+                hostname = host.read().split('\n')[0]
+                if not hostname:
+                    hostname = 'UnKnow'
+                return hostname
+            finally:
+                host.close()
+        else:
+            return 'UnKnow'
 
     def run(self):
         """ 向指定节点发送心跳信号
@@ -49,7 +70,8 @@ class SlaveHeartbeats(threading.Thread):
                 print "Connection error: %s" % e
                 sys.exit(1)
             # message = random.choice(string.ascii_letters) * random.randint(1, 10)
-            message = 'image'
+            hostname = self.get_hostname()
+            message = 'image|{hostname}|{cluster_id}'.format(hostname=hostname, cluster_id=SERVICE_HOST_VAR)
             try:
                 encryption_message = md5_salt(message)
                 s.sendall(message + '%' + encryption_message)
@@ -67,10 +89,9 @@ class SlaveHeartbeats(threading.Thread):
         :return:bool值
         """
         status = False
-        # 检测官方私有仓库(已停用)
-        # registry_url = 'http://127.0.0.1:' + str(PRIVATE_REGISTRY_PORT)
         # 检测harbor仓库
         registry_url = HARBOR_URL
+        # 检测响应服务
         response_url = 'http://127.0.0.1:' + str(IMAGE_SERVICE_PORT_VAR) + '/healthy/'
         try:
             rg_obj = requests.get(registry_url)

@@ -64,8 +64,8 @@ def index_top():
     cluster_id = args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('index_top: ' + str(cluster_id) + ' is illegal', level='error')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('index_top: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     cpu_info = _system.get_all_system(cluster_id, type_='cpu')
     disk_info = _system.get_all_system(cluster_id, type_='disk')
     mem_info = _system.get_all_system(cluster_id, type_='mem')
@@ -134,8 +134,8 @@ def index_node():
     cluster_id = args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('index_node: ' + str(cluster_id) + ' is illegal', level='error')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('index_node: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     nodes = Gl.get_value('CLUSTER_ALL_INFO_VAR', {}).get(cluster_id, {})
     info = {'message': [], 'status': False}
     nodes_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
@@ -231,8 +231,8 @@ def container_info():
     cluster_id = args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('container_info: ' + str(cluster_id) + ' is illegal', level='error')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('container_info: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     container_info = _container.get_all_containers(cluster_id)
     info = []
     for host, value in container_info.items():
@@ -276,8 +276,8 @@ def container_op():
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('container_op: ' + str(cluster_id) + ' is illegal', level='error')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('container_op: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     host_name = rq_args.get('node')
     # type_为元祖,原因未知
     type_ = rq_args.get('action'),
@@ -310,8 +310,8 @@ def container_create():
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('container_create: ' + str(cluster_id) + ' is illegal', level='error')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('container_create: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     host_name = rq_args.get('node')
     create_cmd = rq_args.get('cmd')
     host = node_name_address(cluster_id, host_name)
@@ -347,8 +347,8 @@ def image_info():
     cluster_id = args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('image_info: ' + str(cluster_id) + ' is illegal', level='error')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('image_info: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     images_info = _image.get_all_images(cluster_id)
     info = []
     image_use_list = set()
@@ -407,8 +407,8 @@ def image_operator():
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('image_info: ' + str(cluster_id) + ' is illegal', level='error')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('image_operator: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     host_name = rq_args.get('node')
     # type_为元祖,原因未知
     type_ = rq_args.get('action'),
@@ -472,8 +472,8 @@ def common_node():
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('common_node: ' + str(cluster_id) + ' is illegal')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('common_node: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     nodes = Gl.get_value('CLUSTER_ALL_INFO_VAR', {}).get(cluster_id, {})
     nodes_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
     info = []
@@ -513,8 +513,8 @@ def node_mem():
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('node_mem: ' + str(cluster_id) + ' is illegal')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('node_mem: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     host_name = rq_args.get('node')
     host = node_name_address(str(cluster_id), str(host_name))
     if not host:
@@ -538,8 +538,8 @@ def node_disk():
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('node_disk: ' + str(cluster_id) + ' is illegal')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('node_disk: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     host_name = rq_args.get('node')
     host = node_name_address(str(cluster_id), str(host_name))
     if not host:
@@ -563,8 +563,8 @@ def node_container():
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('node_container: ' + str(cluster_id) + ' is illegal')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('node_container: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     host_name = rq_args.get('node')
     host = node_name_address(str(cluster_id), str(host_name))
     if not host:
@@ -583,58 +583,6 @@ def node_container():
     return jsonify({'message': container_info, 'status': True})
 
 
-# @app.route('/node/image_server/', methods=['POST'])
-# def node_image_server():
-#     """ 返回镜像服务器镜像信息
-#
-#     !!!本方法已不可使用!!!
-#     该方法返会镜像管理节点的镜像列表(使用docker images 获取的信息)
-#
-#     请求方式: POST
-#     请求携带参数: cluster_id
-#                 image_server: 私有镜像仓库ip
-#
-#     :return:
-#     """
-#     rq_args = request.get_json()
-#     cluster_id = rq_args.get('cluster_id')
-#     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
-#     if cluster_id not in all_cluster_id:
-#         _logger.write('node_image_server: ' + str(cluster_id) + ' is illegal')
-#         return jsonify({'message': str(cluster_id) + ' is illegal'})
-#     image_server = rq_args.get('image_server')
-#     if not image_server:
-#         return jsonify({'message': 'image server is error', 'status': False})
-#     info = _image.get_image_server(str(image_server))
-#     return jsonify({'message': info, 'status': True})
-
-
-@app.route('/node/image_server_registry/', methods=['POST'])
-def node_image_server_registry():
-    """ 返回镜像服务器私有仓库列表
-
-    该方法返会私有镜像仓库的镜像信息.仅支持未加密的docker官方私有镜像仓库
-
-    请求方式: POST
-    请求携带参数: cluster_id
-                image_server: 私有镜像仓库ip
-
-    :return:
-    """
-    rq_args = request.get_json()
-    cluster_id = rq_args.get('cluster_id')
-    all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
-    if cluster_id not in all_cluster_id:
-        _logger.write('node_image_server_registry: ' + str(cluster_id) + ' is illegal')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
-    image_server = rq_args.get('image_server')
-    if not image_server:
-        _logger.write('node_image_server_registry: ' + str(image_server) + ' is illegal')
-        return jsonify({'message': 'image server is error', 'status': False})
-    info = _image.get_image_server_registry(image_server)
-    return jsonify({'message': info, 'status': True})
-
-
 @app.route('/node/image_harbor_registry/', methods=['POST'])
 def node_image_server_harbor():
     """ 返回镜像服务器私有仓库harbor列表
@@ -651,21 +599,14 @@ def node_image_server_harbor():
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
-        _logger.write('node_image_server_registry: ' + str(cluster_id) + ' is illegal')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
+        _logger.write('node_image_server_harbor: ' + str(cluster_id) + ' is illegal or not found node in cluster')
+        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
     image_server = rq_args.get('image_server')
     if not image_server:
         _logger.write('node_image_server_registry: ' + str(image_server) + ' is illegal')
         return jsonify({'message': 'image server is error', 'status': False})
     info = _image.get_image_server_harbor(image_server)
     return jsonify({'message': info, 'status': True})
-# @app.route('/node/server_list/', methods=['POST'])
-# def get_server_list():
-#     """ 返回镜像服务器列表
-#
-#     :return:
-#     """
-#     return jsonify({'message': Image.get_image_server_list(), 'status': True})
 
 
 @app.route('/node/alive_server_list/', methods=['POST', 'GET'])
@@ -679,64 +620,6 @@ def get_alive_server_list():
         return jsonify({'message': message, 'status': True})
     else:
         return jsonify({'message': 'No mirror server is available.', 'status': False})
-
-
-@app.route('/node/download/', methods=['POST'])
-def node_download():
-    """ 镜像下载服务的镜像仓库方式
-
-    请求方式: POST
-    请求携带参数: cluster_id
-                image_server: 私有镜像仓库ip
-
-    :return:
-    """
-    rq_args = request.get_json()
-    cluster_id = rq_args.get('cluster_id')
-    to_host = rq_args.get('to_host')
-    image_name = rq_args.get('image_name')
-    image_server = rq_args.get('image_server')
-    all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
-    if cluster_id not in all_cluster_id:
-        _logger.write('node_download: ' + str(cluster_id) + ' is illegal')
-        return jsonify({'message': str(cluster_id) + ' is illegal'})
-    if not image_server:
-        _logger.write('node_download: ' + str(image_server) + ' is illegal')
-        return jsonify({'message': 'image server is error', 'status': False})
-    host = node_name_address(cluster_id, to_host)
-    if not host:
-        _logger.write(str(to_host) + ' not found', level='error')
-        return jsonify({'message': str(to_host) + ' not found', 'status': False})
-    message = _image.download_image(str(host), str(image_server), str(image_name))
-    return jsonify({'message': message, 'status': True})
-
-
-# @app.route('/node/download_tar/', methods=['POST'])
-# def node_download_tar():
-#     """ 镜像下载服务的tar文件方式
-#
-#     !!!该方法以弃用!!!
-#
-#     :return:
-#     """
-#     rq_args = request.get_json()
-#     cluster_id = rq_args.get('cluster_id')
-#     to_host = rq_args.get('to_host')
-#     image_name = rq_args.get('image_name')
-#     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
-#     if cluster_id not in all_cluster_id:
-#         _logger.write('node_download_tar: ' + str(cluster_id) + ' is illegal')
-#         return jsonify({'message': str(cluster_id) + ' is illegal'})
-#     image_server = rq_args.get('image_server')
-#     if not image_server:
-#         _logger.write('node_download_tar: ' + str(image_server) + ' is illegal')
-#         return jsonify({'message': 'image server is error', 'status': False})
-#     host = node_name_address(cluster_id, to_host)
-#     if not host:
-#         _logger.write(str(to_host) + ' not found', level='error')
-#         return jsonify({'message': str(to_host) + ' not found', 'status': False})
-#     message = _image.download_image_tar(str(image_server), str(host), str(image_name))
-#     return jsonify({'message': message, 'status': True})
 
 
 def start_web_server():

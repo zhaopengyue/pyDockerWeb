@@ -5,6 +5,7 @@
 import random
 import string
 import sys
+import os
 import threading
 from socket import *
 
@@ -28,6 +29,28 @@ class SlaveHeartbeats(threading.Thread):
 
     def set_kill(self):
         self.signal = False
+
+    @staticmethod
+    def get_hostname():
+        """ 获取主机hostname
+
+        :return:
+        """
+        os_sys = os.name
+        if os_sys == 'nt':
+            hostname = os.getenv('computername')
+            return hostname
+        elif os_sys == 'posix':
+            host = os.popen('hostname')
+            try:
+                hostname = host.read().split('\n')[0]
+                if not hostname:
+                    hostname = 'UnKnow'
+                return hostname
+            finally:
+                host.close()
+        else:
+            return 'UnKnow'
 
     def run(self):
         """ 向指定节点发送心跳信号
@@ -55,7 +78,8 @@ class SlaveHeartbeats(threading.Thread):
                 print "Connection error: %s" % e
                 sys.exit(1)
             # message = random.choice(string.ascii_letters) * random.randint(1, 10)
-            message = 'slave'
+            hostname = self.get_hostname()
+            message = 'slave|{hostname}|{cluster_id}'.format(hostname=hostname, cluster_id=SERVICE_HOST_VAR)
             try:
                 encryption_message = md5_salt(message)
                 s.sendall(message + '%' + encryption_message)
