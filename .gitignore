@@ -1,0 +1,9 @@
+image-server/.idea
+slave-server/.idea
+master-server/.idea
+*.py[cod]
+*.so
+*.egg
+*.egg-info
+dist
+build

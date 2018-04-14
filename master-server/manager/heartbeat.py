@@ -49,15 +49,24 @@ class Receive(threading.Thread):
                 key, address = self.sock.recvfrom(1024)
                 receive_time = time.time()
                 host = address[0]
+                # 集群所有从节点IP列表
                 cluster_all_host_var = Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])
+                # 集群所有镜像服务器列表
                 all_image_server_host_var = Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', [])
+                # 集群从节点信息列表
                 cluster_all_info_var = Gl.get_value('CLUSTER_ALL_INFO_VAR', {})
+                # 集群镜像服务器信息列表
+                all_image_server_info_var = Gl.get_value('ALL_IMAGE_SERVER_INFO_VAR', {})
+                # 从节点状态字典
                 cluster_status_var = Gl.get_value('CLUSTER_STATUS_VAR', {})
+                # 镜像服务器字典
                 image_server_status_var = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
+                # 集群ID列表
                 cluster_all_id = Gl.get_value('CLUSTER_ALL_ID_VAR', [])
+                # 集群空闲ID列表
                 cluster_free_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
                 try:
-                    type_, hostname, cluster_id = key.split('%')[0].split('|')
+                    type_, hostname, cluster_id_or_registry_server_port = key.split('%')[0].split('|')
                     hostname += '({host_end})'.format(host_end=host.split('.')[-1])
                 except ValueError:
                     continue
@@ -72,14 +81,14 @@ class Receive(threading.Thread):
                     if host not in cluster_all_host_var:
                         # 修改集群配置相关项目
                         cluster_all_host_var.append(host)
-                        if cluster_id in cluster_all_info_var:
-                            if 'node' in cluster_all_info_var[cluster_id]:
-                                cluster_all_info_var[cluster_id]['node'].append({
+                        if cluster_id_or_registry_server_port in cluster_all_info_var:
+                            if 'node' in cluster_all_info_var[cluster_id_or_registry_server_port]:
+                                cluster_all_info_var[cluster_id_or_registry_server_port]['node'].append({
                                     'name': hostname,
                                     'host': host
                                 })
                             else:
-                                cluster_all_info_var[cluster_id].update({
+                                cluster_all_info_var[cluster_id_or_registry_server_port].update({
                                     'node': [{
                                         'name': hostname,
                                         'host': host
@@ -87,20 +96,20 @@ class Receive(threading.Thread):
                                 })
                         else:
                             cluster_all_info_var.update({
-                                cluster_id: {'node': [{'name': hostname, 'host': host}]}
+                                cluster_id_or_registry_server_port: {'node': [{'name': hostname, 'host': host}]}
                             })
-                            cluster_all_id.append(cluster_id)
-                            cluster_free_id.append(cluster_id)
+                            cluster_all_id.append(cluster_id_or_registry_server_port)
+                            cluster_free_id.append(cluster_id_or_registry_server_port)
                     # 修改节点状态
                     if host in cluster_status_var:
                         cluster_status_var[host].update({'time': receive_time, 'status': True})
                     else:
                         cluster_status_var.update({host: {'status': True, 'time': receive_time}})
                 elif type_ == 'image':
-                    # 若为新加入的镜像服务器
-                    if host not in image_server_status_var:
-                        # 修改相关配置
+                    # 若为新加入的镜像服务器, 修改相关信息
+                    if host not in all_image_server_host_var:
                         all_image_server_host_var.append(host)
+                        all_image_server_info_var.update({host: {'registry_port': cluster_id_or_registry_server_port}})
                     # 修改节点状态
                     if host in image_server_status_var:
                         image_server_status_var[host].update({'time': receive_time, 'status': True})
@@ -116,6 +125,7 @@ class Receive(threading.Thread):
                 Gl.set_value('CLUSTER_ALL_INFO_VAR', cluster_all_info_var)
                 Gl.set_value('CLUSTER_FREE_ID_VAR', cluster_free_id)
                 Gl.set_value('CLUSTER_ALL_ID_VAR', cluster_all_id)
+                Gl.set_value('ALL_IMAGE_SERVER_INFO_VAR', all_image_server_info_var)
         finally:
             self.sock.close()
 

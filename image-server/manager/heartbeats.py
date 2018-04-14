@@ -53,6 +53,8 @@ class SlaveHeartbeats(threading.Thread):
                 raise KeyError('Host error.The host must be a string')
             if not isinstance(HEARTBEAT_PORT_VAR, int):
                 raise KeyError('Port error.The port must be a integer')
+            if not isinstance(IMAGE_SERVICE_PORT_VAR, int):
+                raise KeyError('Port error.The port must be a integer')
             if PATTERN_HOST_OBJ.match(SERVICE_HOST_VAR) is None:
                 raise KeyError('Host error.The host may be like "127.0.0.1"')
             try:
@@ -71,7 +73,10 @@ class SlaveHeartbeats(threading.Thread):
                 sys.exit(1)
             # message = random.choice(string.ascii_letters) * random.randint(1, 10)
             hostname = self.get_hostname()
-            message = 'image|{hostname}|{cluster_id}'.format(hostname=hostname, cluster_id=SERVICE_HOST_VAR)
+            message = 'image|{hostname}|{image_server_port}'.format(
+                hostname=hostname,
+                image_server_port=IMAGE_SERVICE_PORT_VAR
+            )
             try:
                 encryption_message = md5_salt(message)
                 s.sendall(message + '%' + encryption_message)
