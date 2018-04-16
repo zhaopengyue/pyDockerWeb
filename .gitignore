@@ -1,6 +1,15 @@
 image-server/.idea
 slave-server/.idea
 master-server/.idea
+image-server/log/*.txt
+slave-server/log/*.txt
+master-server/log/*.txt
+master-server/data/*.json
+slave-server/data/*.json
+image-server/data/*.json
+!image-server/tmp/*.md
+!master-server/tmp/*.md
+!master-server/tmp/*.md
 *.py[cod]
 *.so
 *.egg

@@ -52,8 +52,8 @@ class GlobalMap(object):
         :param value: 变量值
         :return:
         """
-        if not os.path.exists(GLOBAL_VAL_FILE_PATH):
-            raise ValueError(GLOBAL_VAL_FILE_PATH + ' is not found.')
+        # if not os.path.exists(GLOBAL_VAL_FILE_PATH):
+        #     raise ValueError(GLOBAL_VAL_FILE_PATH + ' is not found.')
         if isinstance(key, dict):
             raise TypeError('unhashable type: dict')
         if isinstance(value, set):
@@ -62,10 +62,11 @@ class GlobalMap(object):
             raise TypeError('unhashable type: list')
         GlobalMap._global_map_lock.acquire()
         _global_map = {}
-        with open(GLOBAL_VAL_FILE_PATH) as fp:
+        # 以追加方式读取文件, 若不存在则创建空文件
+        with open(GLOBAL_VAL_FILE_PATH, 'a+') as fp:
             try:
                 _global_map = json.load(fp, encoding='utf-8')
-            except ValueError, e:
+            except ValueError:
                 pass
         _global_map.update({key: value})
         with open(GLOBAL_VAL_FILE_PATH, 'w') as fp:
