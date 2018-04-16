@@ -2,25 +2,26 @@
 """
 本程序实现从服务的心跳机制
 """
-import random
-import string
-import sys
 import os
 import requests
 import threading
 import time
 from socket import *
-sys.path.append('..')
+import log
+from manager.image import ImageHarbor
 from etc.sys_set import IMAGE_SERVICE_PORT_VAR
 from manager.tools import md5_salt
-sys.path.append('..')
 from etc.sys_set import SERVICE_HOST_VAR
 from etc.sys_set import HEARTBEAT_PORT_VAR
 from etc.sys_set import HARBOR_URL
 from etc.core_var import PATTERN_HOST_OBJ
 
 
-class SlaveHeartbeats(threading.Thread):
+_logger = log.Logging('heartbeat')
+_logger.set_file('heartbeat.txt')
+
+
+class ImageHeartbeats(threading.Thread):
     @staticmethod
     def get_hostname():
         """ 获取主机hostname
@@ -73,9 +74,10 @@ class SlaveHeartbeats(threading.Thread):
                 sys.exit(1)
             # message = random.choice(string.ascii_letters) * random.randint(1, 10)
             hostname = self.get_hostname()
+            image_harbor = ImageHarbor(HARBOR_URL)
             message = 'image|{hostname}|{image_server_port}'.format(
                 hostname=hostname,
-                image_server_port=IMAGE_SERVICE_PORT_VAR
+                image_server_port=image_harbor.port
             )
             try:
                 encryption_message = md5_salt(message)
@@ -106,3 +108,12 @@ class SlaveHeartbeats(threading.Thread):
         except requests.ConnectionError:
             pass
         return status
+
+
+def start_heartbeats():
+    print '心跳服务运行中'
+    _logger.write('心跳检测服务已启动', level='info')
+    heartbeat = ImageHeartbeats()
+    heartbeat.setDaemon(True)
+    heartbeat.start()
+    print '心跳服务已启动'

@@ -83,11 +83,11 @@ function action(node, image_id, action, args) {
         success: function (resful, status) {
             if(status && resful['status']) {
                 toastr.info(resful['message']);
-                mk_form(cluster_id);
+                $("#image-node-info").DataTable().ajax.reload();
             }
             else {
                 toastr.error(resful['message']);
-                mk_form(cluster_id);
+                $("#image-node-info").DataTable().ajax.reload();
             }
         }
     });
@@ -119,70 +119,62 @@ function getTotalRemarksHtml(remarks){
     return remarks + '&nbsp;&nbsp;<a href="javascript:void(0);" onclick="changeShowRemarks(this)"><b>close</b></a>';
 }
 
-
 function init_form(cluster_id) {
-    $.ajax({
-            data: JSON.stringify({'cluster_id': cluster_id}),
-            dataType: 'json',
-            type: 'POST',
-            contentType: 'application/json; charset=UTF-8',
+    $('#image-node-info').DataTable({
+        ajax: {
             url: '/apis/image/info/',
-            sync: true,
-            success: function (resful, status) {
-                if(status && resful['status']) {
-                    $('#image-node-info').DataTable({
-                        data: resful['message'],
-                        autoWidth: true,
-                        columns: [
-                            { data: null },
-                            { data: 'short_id' },
-                            { data: 'node' },
-                            { data: 'tag' },
-                            { data: 'size' },
-                            { data: 'created' },
-                            { data: 'os' },
-                            { data: 'status' }
-                        ],
-                        columnDefs: [{
-                                targets: 0,
-                                render: function (data, type, row, meta) {
-                                    return make_action(row['node'], row['tag']);
-                                }
-                            },
-                            {
-                                targets: 3,
-                                type: "date",
-                                render: function (data, type, row, meta) {
-                                    if(data.length > maxLength) {
-                                        return getPartialRemarksHtml(data);
-                                    }
-                                    else {
-                                        return data;
-                                    }
-                                }
-                            },
-                            {orderable: false, targets: 0}
-                        ],
-                        createdRow: function (row, data, dataIndex) {
-                            console.log(dataIndex);
-                            if(data['tag'].length > maxLength) {
-                                $(row).children('td').eq(3).children('a').attr('onclick', 'changeShowRemarks(this)');
-                            }
-                            $(row).children('td').eq(3).attr('content', data['tag'])
-                        }
-                    })
+            type: 'POST',
+            dataType: 'json',
+            dataSrc: function (data) {
+                if(data['status']) {
+                    return data['message'];
+                } else{
+                    return [];
                 }
+            },
+            data: function() {
+               return JSON.stringify({'cluster_id': cluster_id})
+            },
+            contentType: 'application/json; charset=UTF-8'
+        },
+        autoWidth: true,
+        columns: [
+            { data: null },
+            { data: 'short_id' },
+            { data: 'node' },
+            { data: 'tag' },
+            { data: 'size' },
+            { data: 'created' },
+            { data: 'os' },
+            { data: 'status' }
+        ],
+        columnDefs: [{
+                targets: 0,
+                render: function (data, type, row, meta) {
+                    return make_action(row['node'], row['tag']);
+                }
+            },
+            {
+                targets: 3,
+                type: "date",
+                render: function (data, type, row, meta) {
+                    if(data.length > maxLength) {
+                        return getPartialRemarksHtml(data);
+                    }
+                    else {
+                        return data;
+                    }
+                }
+            },
+            {orderable: false, targets: 0}
+        ],
+        createdRow: function (row, data, dataIndex) {
+            if(data['tag'].length > maxLength) {
+                $(row).children('td').eq(3).children('a').attr('onclick', 'changeShowRemarks(this)');
             }
-        });
-}
-function mk_form(cluster_id) {
-    if ($('#image-node-info').hasClass('dataTable'))
-    {
-        var dttable = $('#image-node-info').dataTable();
-        dttable.fnClearTable(); //清空一下table
-        dttable.fnDestroy(); //还原初始化了的datatable
-    }
-    init_form(cluster_id);
+            $(row).children('td').eq(3).attr('content', data['tag'])
+        }
+    })
 }
 $(document).ready(function () {
     var cluster_id = window.location.host.split(':')[0];

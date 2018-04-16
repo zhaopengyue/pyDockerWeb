@@ -94,15 +94,17 @@ function create_submit() {
             if(status && resful['status']) {
                 toastr.info('创建成功');
                 toastr.info('容器ID: \n' + resful['message']);
-                mk_form(cluster_id);
+                $("#container-node-info").DataTable().ajax.reload();
             }
             else {
                 toastr.error(resful['message']);
-                mk_form(cluster_id);
+                $("#container-node-info").DataTable().ajax.reload();
             }
         }
     });
 }
+
+
 
 function action(node, container_id, action, args) {
     var cluster_id = window.location.host.split(':')[0];
@@ -126,12 +128,15 @@ function action(node, container_id, action, args) {
         sync: true,
         success: function (resful, status) {
             if(status && resful['status']) {
+                if(action === 'logs') {
+                    alert(resful['message']);
+                }else
                 toastr.info(resful['message']);
-                mk_form(cluster_id);
+                $("#container-node-info").DataTable().ajax.reload();
             }
             else {
                 toastr.error(resful['message']);
-                mk_form(cluster_id);
+                $("#container-node-info").DataTable().ajax.reload();
             }
         }
     });
@@ -164,81 +169,79 @@ function getTotalRemarksHtml(remarks){
 }
 
 function init_form(cluster_id) {
-    $.ajax({
-            data: JSON.stringify({'cluster_id': cluster_id}),
-            dataType: 'json',
-            type: 'POST',
-            contentType: 'application/json; charset=UTF-8',
+    $('#container-node-info').DataTable({
+        ajax: {
             url: '/apis/container/info/',
-            sync: true,
-            success: function (resful, status) {
-                if(status && resful['status']) {
-                    $('#container-node-info').DataTable({
-                        data: resful['message'],
-                        // autoWidth: true,
-                        columns: [
-                            { data: null },
-                            { data: 'short_id' },
-                            { data: 'node' },
-                            { data: 'name' },
-                            { data: 'image' },
-                            { data: 'exit_time' },
-                            { data: 'create' },
-                            { data: 'status' }
-                        ],
-                          scrollY: "1000px",
-                        scrollCollapse: true,
-                        paging: true,
-                        retrieve:true,
-                        columnDefs: [{
-                                targets: 0,
-                                render: function (data, type, row, meta) {
-                                    return make_action(row['node'], row['short_id']);
-                                }
-                            },
-                            {
-                                targets: 4,
-                                type: "date",
-                                render: function (data, type, row, meta) {
-                                    if(row['image'].length > maxLength) {
-                                        return getPartialRemarksHtml(row['image']);
-                                    }
-                                    else {
-                                        return row['image'];
-                                    }
-                                }
-                            },
-                            {
-                                targets: 6,
-                                type: "date",
-                                render: function (data, type, row, meta) {
-                                    return data.substr(0, 19);
-                                }
-                            },
-                            {orderable: false, targets: 0}
-                        ],
-                        createdRow: function (row, data, dataIndex) {
-                            if(data['image'].length > maxLength) {
-                                $(row).children('td').eq(4).children('a').attr('onclick', 'changeShowRemarks(this)');
-                            }
-                            $(row).children('td').eq(4).attr('content', data['image'])
-                        }
-                    })
+            type: 'POST',
+            dataType: 'json',
+            dataSrc: function (data) {
+                if(data['status']) {
+                    return data['message'];
+                } else{
+                    return [];
                 }
+            },
+            data: function() {
+               return JSON.stringify({'cluster_id': cluster_id})
+            },
+            contentType: 'application/json; charset=UTF-8'
+        },
+        // data: resful['message'],
+        // autoWidth: true,
+        columns: [
+            { data: null },
+            { data: 'short_id' },
+            { data: 'node' },
+            { data: 'name' },
+            { data: 'image' },
+            { data: 'exit_time' },
+            { data: 'create' },
+            { data: 'status' }
+        ],
+          scrollY: "1000px",
+        scrollCollapse: true,
+        paging: true,
+        retrieve:true,
+        columnDefs: [{
+                targets: 0,
+                render: function (data, type, row, meta) {
+                    return make_action(row['node'], row['short_id']);
+                }
+            },
+            {
+                targets: 4,
+                type: "date",
+                render: function (data, type, row, meta) {
+                    if(row['image'].length > maxLength) {
+                        return getPartialRemarksHtml(row['image']);
+                    }
+                    else {
+                        return row['image'];
+                    }
+                }
+            },
+            {
+                targets: 6,
+                type: "date",
+                render: function (data, type, row, meta) {
+                    return data.substr(0, 19);
+                }
+            },
+            {orderable: false, targets: 0}
+        ],
+        createdRow: function (row, data, dataIndex) {
+            if(data['image'].length > maxLength) {
+                $(row).children('td').eq(4).children('a').attr('onclick', 'changeShowRemarks(this)');
             }
-        });
+            $(row).children('td').eq(4).attr('content', data['image'])
+        }
+    })
 }
 
-function mk_form(cluster_id) {
-    if ($("#container-node-info").hasClass('dataTable'))
-    {
-        var dttable = $('#container-node-info').dataTable();
-        dttable.fnClearTable(); //清空一下table
-        dttable.fnDestroy(); //还原初始化了的datatable
-    }
-    init_form(cluster_id);
-}
 $(document).ready(function () {
     var cluster_id = window.location.host.split(':')[0];
     init_form(cluster_id);
+    $('#container-node-info').on('length.dt', function (e, settings, newLength) {
+
+    })
 });

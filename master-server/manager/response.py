@@ -609,6 +609,34 @@ def node_image_server_harbor():
     return jsonify({'message': info, 'status': True})
 
 
+@app.route('/node/download/', methods=['POST'])
+def node_download():
+    """ 镜像下载服务的镜像仓库方式
+    请求方式: POST
+    请求携带参数: cluster_id
+                image_server: 私有镜像仓库ip
+    :return:
+    """
+    rq_args = request.get_json()
+    cluster_id = rq_args.get('cluster_id')
+    to_host = rq_args.get('to_host')
+    image_name = rq_args.get('image_name')
+    image_server = rq_args.get('image_server')
+    all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
+    if cluster_id not in all_cluster_id:
+        _logger.write('node_download: ' + str(cluster_id) + ' is illegal')
+        return jsonify({'message': str(cluster_id) + ' is illegal'})
+    if not image_server:
+        _logger.write('node_download: ' + str(image_server) + ' is illegal')
+        return jsonify({'message': 'image server is error', 'status': False})
+    host = node_name_address(cluster_id, to_host)
+    if not host:
+        _logger.write(str(to_host) + ' not found', level='error')
+        return jsonify({'message': str(to_host) + ' not found', 'status': False})
+    message = _image.download_image(str(host), str(image_server), str(image_name))
+    return jsonify({'message': message, 'status': True})
+
+
 @app.route('/node/alive_server_list/', methods=['POST', 'GET'])
 def get_alive_server_list():
     """ 返回可用的镜像服务器列表

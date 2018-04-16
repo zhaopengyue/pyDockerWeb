@@ -8,17 +8,19 @@ import sys
 import os
 import threading
 from socket import *
-
 import time
-
 import requests
-
+import log
 from manager.tools import md5_salt
 sys.path.append('..')
 from etc.sys_set import SERVICE_HOST_VAR
 from etc.sys_set import SLAVE_SERVICE_PORT_VAR
 from etc.sys_set import HEARTBEAT_PORT_VAR
 from etc.core_var import PATTERN_HOST_OBJ
+
+
+_logger = log.Logging('heartbeat')
+_logger.set_file('heartbeat.txt')
 
 
 class SlaveHeartbeats(threading.Thread):
@@ -105,3 +107,12 @@ class SlaveHeartbeats(threading.Thread):
         except requests.ConnectionError:
             pass
         return status
+
+
+def start_heartbeats():
+    print '心跳服务运行中'
+    _logger.write('心跳检测服务已启动', level='info')
+    heartbeat = SlaveHeartbeats()
+    heartbeat.setDaemon(True)
+    heartbeat.start()
+    print '心跳服务已启动'
