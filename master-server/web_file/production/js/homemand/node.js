@@ -41,11 +41,11 @@ function get_image_server() {
                     var option = document.createElement('option');
                     if(i === 0) {
                         option.setAttribute('selected', true);
-                        temp_test = result[i][0];
+                        temp_test = result[i];
                     }
                     option.setAttribute('name', 'select_node');
-                    option.setAttribute('value', result[i][0]);
-                    option.innerHTML = result[i][0];
+                    option.setAttribute('value', result[i]);
+                    option.innerHTML = result[i];
                     select.appendChild(option);
                 }
                 init_form(temp_test);

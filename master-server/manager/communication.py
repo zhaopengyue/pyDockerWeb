@@ -11,7 +11,7 @@ from requests.exceptions import ConnectionError
 from tools import GlobalMap as Gl
 sys.path.append('..')
 from etc.sys_set import SLAVE_SERVICE_PORT_VAR
-from etc.sys_set import IMAGE_SERVER_LIST
+from etc.sys_set import IMAGE_SERVER_PORT_VAR
 
 
 _root_url = 'http://{host}:{port}/{root_path}/{type_path}'
@@ -468,25 +468,21 @@ class Image(object):
         """
         cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
         image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
-        image_server_port = None
+        all_image_server_info_var = Gl.get_value('ALL_IMAGE_SERVER_INFO_VAR', {})
         if download_to_host not in cluster_status or not cluster_status.get(download_to_host).get('status'):
             _logger.write('节点Host: \'' + str(download_to_host) + '\'无效或本Host不可用', level='warn')
             return {'message': 'node unavailable', 'status': False}
         if image_server_host not in image_server_status or not image_server_status.get(image_server_host).get('status'):
             _logger.write('镜像服务器Host: \'' + str(image_server_host) + '\'无效或本Host不可用', level='warn')
             return {'message': 'image server unavailable', 'status': False}
-        for server in IMAGE_SERVER_LIST:
-            if server[0] == image_server_host:
-                image_server_port = server[1]
-        if not image_server_port:
-            return {'message': 'image server not found', 'status': False}
+        registry_server_port = all_image_server_info_var.get(image_server_host).get('registry_port')
         # 提取tag
         try:
             repository_tag = repository.split(':')[1]
         except IndexError:
             repository_tag = None
         # 拼接仓库名
-        repository = image_server_host + ':' + str(image_server_port) + '/' + repository
+        repository = image_server_host + ':' + str(registry_server_port) + '/' + repository
         rq_url = _root_url.format(
             host=download_to_host,
             port=SLAVE_SERVICE_PORT_VAR,
@@ -510,16 +506,22 @@ class Image(object):
     def get_image_server_list():
         """ 返回镜像服务器列表
 
-        :return:
+        :return:['image_server_host_1', 'image_server_host_2', ...]
         """
-        return {'message': IMAGE_SERVER_LIST, 'status': True}
+        all_image_server_host_var = Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', [])
+        return {'message': all_image_server_host_var, 'status': True}
 
     @staticmethod
     def get_alive_image_server_list():
+        """ 返回可用的镜像服务器列表
+
+        :return: ['alive_image_server_host_1', 'alive_image_server_host_2', ...]
+        """
         info = []
+        all_image_server_host_var = Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', [])
         image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
-        for image_server in IMAGE_SERVER_LIST:
-            if image_server[0] not in image_server_status or not image_server_status.get(image_server[0]).get('status'):
+        for image_server in all_image_server_host_var:
+            if image_server not in image_server_status or not image_server_status.get(image_server).get('status'):
                 continue
             info.append(image_server)
         if info.__len__() > 0:
@@ -527,89 +529,20 @@ class Image(object):
         else:
             return {'message': info, 'status': False}
 
-
-    @staticmethod
-    def get_image_server(image_server):
-        """ 获取镜像服务器所在节点的镜像列表
-
-        :param image_server:  镜像服务器IP
-        :return:
-        """
-        image_server_port = None
-        image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
-        if image_server not in image_server_status or not image_server_status.get(image_server).get('status'):
-            _logger.write('镜像服务器Host: \'' + str(image_server) + '\'无效或本Host不可用', level='warn')
-            return {'message': 'image server unavailable', 'status': False}
-        for server in IMAGE_SERVER_LIST:
-            if server[0] == image_server:
-                image_server_port = server[1]
-        if image_server_port is None:
-            return {'message': 'image server not allowed', 'status': False}
-        rq_url = _root_url.format(
-            host=image_server,
-            port=image_server_port,
-            root_path='image_server',
-            type_path=''
-        )
-        try:
-            rq_obj = requests.get(rq_url)
-            exec_result = json.loads(rq_obj.text)
-        except ConnectionError:
-            _logger.write(str(image_server) + '连接失败', 'warn')
-            exec_result = {'message': 'image server connect fail', 'status': False}
-        return exec_result
-
-    @staticmethod
-    def get_image_server_registry(image_server):
-        """ 获取镜像镜像服务器所在节点的私有仓库
-
-        :param image_server:
-        :return:
-        """
-        image_server_port = None
-        image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
-        if image_server not in image_server_status or not image_server_status.get(image_server).get('status'):
-            _logger.write('镜像服务器Host: \'' + str(image_server) + '\'无效或本Host不可用', level='warn')
-            return {'message': 'image server unavailable', 'status': False}
-        for server in IMAGE_SERVER_LIST:
-            if server[0] == image_server:
-                image_server_port = server[2]
-        if image_server_port is None:
-            return {'message': 'image server not allowed', 'status': False}
-        rq_url = _root_url.format(
-            host=image_server,
-            port=image_server_port,
-            root_path='image_registry_server',
-            type_path=''
-        )
-        try:
-            rq_obj = requests.get(rq_url)
-            exec_result = json.loads(rq_obj.text)
-        except ConnectionError:
-            _logger.write(str(image_server) + '连接失败', 'warn')
-            exec_result = {'message': 'image server connect fail', 'status': False}
-        return exec_result
-
     @staticmethod
     def get_image_server_harbor(image_server):
         """ 获取harbor镜像列表
 
-        :param image_server:
+        :param image_server: harbor镜像服务器地址
         :return:
         """
-        image_server_port = None
         image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
         if image_server not in image_server_status or not image_server_status.get(image_server).get('status'):
             _logger.write('镜像服务器Host: \'' + str(image_server) + '\'无效或本Host不可用', level='warn')
             return {'message': 'image server unavailable', 'status': False}
-        for server in IMAGE_SERVER_LIST:
-            if server[0] == image_server:
-                image_server_port = server[2]
-        if image_server_port is None:
-            return {'message': 'image server not allowed', 'status': False}
         rq_url = _root_url.format(
             host=image_server,
-            port=image_server_port,
+            port=IMAGE_SERVER_PORT_VAR,
             root_path='image_harbor_server',
             type_path=''
         )
@@ -619,50 +552,6 @@ class Image(object):
         except ConnectionError:
             _logger.write(str(image_server) + '连接失败', 'warn')
             exec_result = {'message': 'image server connect fail', 'status': False}
-        return exec_result
-
-    @staticmethod
-    def download_image_tar(image_server, download_to_host, repository):
-        """ 下载镜像
-
-        从远程镜像仓库下载镜像  -- 文件方式
-
-        :param image_server: 镜像服务器地址
-        :param download_to_host: 要下载镜像的节点
-        :param repository: 所要下载的镜像名(包含tag)
-        :return:
-
-        """
-        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
-        if download_to_host not in cluster_status or not cluster_status.get(download_to_host).get('status'):
-            _logger.write('节点Host: \'' + download_to_host + '\'无效或本Host不可用', level='warn')
-            return {'message': 'node unavailable', 'status': False}
-        image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
-        if image_server not in image_server_status or not image_server_status.get(image_server).get('status'):
-            _logger.write('镜像服务器Host: \'' + str(image_server) + '\'无效或本Host不可用', level='warn')
-            return {'message': 'image server unavailable', 'status': False}
-        image_server_port = None
-        for server in IMAGE_SERVER_LIST:
-            if server[0] == image_server:
-                image_server_port = server[1]
-        if image_server_port is None:
-            return {'message': 'image server not allowed', 'status': False}
-        rq_url = _root_url.format(
-            host=image_server,
-            port=image_server_port,
-            root_path='image_server',
-            type_path=''
-        )
-        rq_args = {
-            'to_host': download_to_host,
-            'image_name': repository
-        }
-        try:
-            rq_obj = requests.post(rq_url, json=rq_args)
-            exec_result = json.loads(rq_obj.text)
-        except ConnectionError:
-            _logger.write(str(download_to_host) + '连接失败', 'warn')
-            exec_result = {'message': 'host connect fail', 'status': False}
         return exec_result
 
 

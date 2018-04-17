@@ -8,6 +8,7 @@ import socket
 import threading
 import time
 import log
+import choose
 sys.path.append('..')
 from tools import GlobalMap as Gl
 from tools import md5_salt
@@ -47,34 +48,89 @@ class Receive(threading.Thread):
             while True:
                 key, address = self.sock.recvfrom(1024)
                 receive_time = time.time()
+                host = address[0]
+                # 集群所有从节点IP列表
+                cluster_all_host_var = Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])
+                # 集群所有镜像服务器列表
+                all_image_server_host_var = Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', [])
+                # 集群从节点信息列表
+                cluster_all_info_var = Gl.get_value('CLUSTER_ALL_INFO_VAR', {})
+                # 集群镜像服务器信息列表
+                all_image_server_info_var = Gl.get_value('ALL_IMAGE_SERVER_INFO_VAR', {})
+                # 从节点状态字典
                 cluster_status_var = Gl.get_value('CLUSTER_STATUS_VAR', {})
+                # 镜像服务器字典
                 image_server_status_var = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
-                # 若地址不在配置文件中,则该心跳无效,忽略请求
-                if address[0] not in Gl.get_value('CLUSTER_ALL_HOSTS_VAR', []) \
-                        and address[0] not in Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', []):
-                    pass
-                else:
-                    type_ = key.split('%')[0]
-                    if type_ != 'slave' and type_ != 'image':
-                        continue
-                    if not self._check_key(key):
-                        continue
-                    if type_ == 'slave':
-                        if address[0] in cluster_status_var:
-                            cluster_status_var[address[0]].update({'time': receive_time, 'status': True})
+                # 集群ID列表
+                cluster_all_id = Gl.get_value('CLUSTER_ALL_ID_VAR', [])
+                # 集群空闲ID列表
+                cluster_free_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
+                try:
+                    type_, hostname, cluster_id_or_registry_server_port = key.split('%')[0].split('|')
+                    hostname += '({host_end})'.format(host_end=host.split('.')[-1])
+                except ValueError:
+                    continue
+                # 检查节点类型
+                if type_ != 'slave' and type_ != 'image':
+                    continue
+                # 检查密钥是否正确
+                if not self._check_key(key):
+                    continue
+                if type_ == 'slave':
+                    # 如果是新加入的机器
+                    if host not in cluster_all_host_var:
+                        # 修改集群配置相关项目
+                        cluster_all_host_var.append(host)
+                        if cluster_id_or_registry_server_port in cluster_all_info_var:
+                            if 'node' in cluster_all_info_var[cluster_id_or_registry_server_port]:
+                                cluster_all_info_var[cluster_id_or_registry_server_port]['node'].append({
+                                    'name': hostname,
+                                    'host': host
+                                })
+                            else:
+                                cluster_all_info_var[cluster_id_or_registry_server_port].update({
+                                    'node': [{
+                                        'name': hostname,
+                                        'host': host
+                                    }]
+                                })
                         else:
-                            cluster_status_var.update({address[0]: {'status': True, 'time': receive_time}})
+                            cluster_all_info_var.update({
+                                cluster_id_or_registry_server_port: {'node': [{'name': hostname, 'host': host}]}
+                            })
+                            cluster_all_id.append(cluster_id_or_registry_server_port)
+                            cluster_free_id.append(cluster_id_or_registry_server_port)
+                    # 修改节点状态
+                    if host in cluster_status_var:
+                        cluster_status_var[host].update({'time': receive_time, 'status': True})
                     else:
-                        if address[0] in image_server_status_var:
-                            image_server_status_var.get(address[0]).update({'time': receive_time, 'status': True})
-                        else:
-                            image_server_status_var.update({address[0]: {'status': True, 'time': receive_time}})
+                        cluster_status_var.update({host: {'status': True, 'time': receive_time}})
+                elif type_ == 'image':
+                    # 若为新加入的镜像服务器, 修改相关信息
+                    if host not in all_image_server_host_var:
+                        all_image_server_host_var.append(host)
+                        all_image_server_info_var.update({host: {'registry_port': cluster_id_or_registry_server_port}})
+                    # 修改节点状态
+                    if host in image_server_status_var:
+                        image_server_status_var[host].update({'time': receive_time, 'status': True})
+                    else:
+                        image_server_status_var.update({host: {'status': True, 'time': receive_time}})
+                else:
+                    pass
+                # 写入数据
                 Gl.set_value('CLUSTER_STATUS_VAR', cluster_status_var)
                 Gl.set_value('IMAGE_SERVER_STATUS_VAR', image_server_status_var)
+                Gl.set_value('CLUSTER_ALL_HOSTS_VAR', cluster_all_host_var)
+                Gl.set_value('ALL_IMAGE_SERVER_HOST_VAR', all_image_server_host_var)
+                Gl.set_value('CLUSTER_ALL_INFO_VAR', cluster_all_info_var)
+                Gl.set_value('CLUSTER_FREE_ID_VAR', cluster_free_id)
+                Gl.set_value('CLUSTER_ALL_ID_VAR', cluster_all_id)
+                Gl.set_value('ALL_IMAGE_SERVER_INFO_VAR', all_image_server_info_var)
         finally:
             self.sock.close()
 
-    def _check_key(self, message):
+    @staticmethod
+    def _check_key(message):
         if '%' not in message:
             return False
         if md5_salt(message.split('%')[0]) != message.split('%')[1]:
@@ -96,8 +152,8 @@ class Heartbeats(object):
             cluster_status_var = Gl.get_value('CLUSTER_STATUS_VAR', {})
             image_server_status_var = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
             all_image_server_host = Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', [])
-            if not cluster_all_host_var:
-                raise ValueError('Value error.CLUSTER_ALL_HOSTS_VAR is not allowed to be empty.')
+            # if not cluster_all_host_var:
+            #     raise ValueError('Value error.CLUSTER_ALL_HOSTS_VAR is not allowed to be empty.')
             for host in cluster_all_host_var:
                 if host not in cluster_status_var:
                     cluster_status_var.update({host: {'status': False, 'time': 0}})
@@ -105,8 +161,8 @@ class Heartbeats(object):
                     last_time = cluster_status_var.get(host).get('time')
                     if now_time - last_time > HEARTBEAT_TIMEOUT_VAR:
                         cluster_status_var.update({host: {'status': False, 'time': last_time}})
-            if not all_image_server_host:
-                raise ValueError('Value error.ALL_IMAGE_SERVER_HOST_VAR is not allowed to be empty.')
+            # if not all_image_server_host:
+            #     raise ValueError('Value error.ALL_IMAGE_SERVER_HOST_VAR is not allowed to be empty.')
             for host in all_image_server_host:
                 if host not in image_server_status_var:
                     image_server_status_var.update({host: {'status': False, 'time': 0}})
@@ -122,7 +178,8 @@ class Heartbeats(object):
 
 def start_heartbeats():
     print '心跳服务运行中...'
-    num_receivers = len(Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])) + len(Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', []))
+    # +1防止两者皆为0
+    num_receivers = len(Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])) + len(Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', [])) + 1
     receivers = []
     for i in range(num_receivers):
         receiver = Receive(host=SERVICE_HOST_VAR, port=HEARTBEAT_PORT_VAR)
