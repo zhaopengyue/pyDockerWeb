@@ -5,7 +5,6 @@
 import logging
 import sys
 import os
-sys.path.append('..')
 from etc.core_var import LOG_DIR
 
 

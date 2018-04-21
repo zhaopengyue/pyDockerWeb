@@ -8,10 +8,9 @@ from flask import Flask, url_for, request, jsonify
 from flask_restful import Api
 from flask_restful import Resource
 from flask_restful import reqparse
-sys.path.append('..')
-from node import Containers
-from node import Images
-from node import System
+from manager.node import Containers
+from manager.node import Images
+from manager.node import System
 from etc.sys_set import SLAVE_SERVICE_PORT_VAR, THE_MACHINE_IP
 
 

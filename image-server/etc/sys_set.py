@@ -12,9 +12,9 @@ IMAGE_SERVICE_PORT_VAR = 14000
 # !主服务心跳通信端口
 HEARTBEAT_PORT_VAR = 10000
 # !主服务所在IP
-SERVICE_HOST_VAR = '127.0.0.1'
+SERVICE_HOST_VAR = '10.42.0.10'
 
 # --------------------------harbor镜像仓库配置--------------------- #
-HARBOR_URL = 'http://127.0.0.1:17000'
+HARBOR_URL = 'http://10.42.0.10:17000'
 HARBOR_USERNAME = None
 HARBOR_PASSWORD = None

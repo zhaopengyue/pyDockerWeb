@@ -3,13 +3,11 @@
 本文件包含一些常用工具函数
 """
 import hashlib
-import sys
 import os
 import base64
 import math
 import json
 import threading
-sys.path.append('..')
 from etc.core_var import MD5_64_SALT
 from etc.core_var import GLOBAL_VAL_FILE_PATH
 

@@ -3,15 +3,13 @@
 本程序实现主服务的心跳服务器
 心跳包由从服务在每个轮训后上传，主服务通过心跳包定时检测从服务状态并将其标记。采用UDP通信
 """
-import sys
 import socket
 import threading
 import time
-import log
 import choose
-sys.path.append('..')
-from tools import GlobalMap as Gl
-from tools import md5_salt
+from manager import log
+from manager.tools import GlobalMap as Gl
+from manager.tools import md5_salt
 from etc.sys_set import HEARTBEAT_PORT_VAR
 from etc.sys_set import HEARTBEAT_TIMEOUT_VAR
 from etc.sys_set import SERVICE_HOST_VAR
@@ -67,6 +65,7 @@ class Receive(threading.Thread):
                 cluster_free_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
                 try:
                     type_, hostname, cluster_id_or_registry_server_port = key.split('%')[0].split('|')
+                    print hostname
                     hostname += '({host_end})'.format(host_end=host.split('.')[-1])
                 except ValueError:
                     continue

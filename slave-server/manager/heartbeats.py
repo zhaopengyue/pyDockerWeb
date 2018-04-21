@@ -12,7 +12,6 @@ import time
 import requests
 import log
 from manager.tools import md5_salt
-sys.path.append('..')
 from etc.sys_set import SERVICE_HOST_VAR
 from etc.sys_set import SLAVE_SERVICE_PORT_VAR
 from etc.sys_set import HEARTBEAT_PORT_VAR

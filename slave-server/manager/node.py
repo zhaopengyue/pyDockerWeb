@@ -10,7 +10,6 @@ import re
 from docker.errors import APIError
 from docker.errors import NotFound
 from docker.errors import ImageNotFound
-sys.path.append('..')
 
 
 class System(object):

@@ -7,8 +7,8 @@ import time
 
 import log
 from heartbeats import SlaveHeartbeats
-from node import Containers
-from node import Images
+from manager.node import Containers
+from manager.node import Images
 
 
 class Rotating(threading.Thread):

@@ -4,13 +4,11 @@
 !!! 已弃用 !!!
 
 """
-import sys
 import os
 from BaseHTTPServer import BaseHTTPRequestHandler
 import cgi
 import docker
 import threading
-sys.path.append('..')
 from etc.core_var import TMP_DIR
 from etc.sys_set import IMAGE_SERVER_SLAVE_PORT
 

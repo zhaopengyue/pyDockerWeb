@@ -6,10 +6,9 @@ import json
 import sys
 import re
 import requests
-import log
+from manager import log
 from requests.exceptions import ConnectionError
-from tools import GlobalMap as Gl
-sys.path.append('..')
+from manager.tools import GlobalMap as Gl
 from etc.sys_set import SLAVE_SERVICE_PORT_VAR
 from etc.sys_set import IMAGE_SERVER_PORT_VAR
 
@@ -482,7 +481,8 @@ class Image(object):
         except IndexError:
             repository_tag = None
         # 拼接仓库名
-        repository = image_server_host + ':' + str(registry_server_port) + '/' + repository
+        repository = image_server_host + ':' + str(registry_server_port) + '/' + repository.split(':')[0]
+        print repository
         rq_url = _root_url.format(
             host=download_to_host,
             port=SLAVE_SERVICE_PORT_VAR,

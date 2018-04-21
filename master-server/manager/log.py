@@ -3,9 +3,7 @@
 本程序实现主服务的日志服务
 """
 import logging
-import sys
 import os
-sys.path.append('..')
 from etc.core_var import LOG_DIR
 
 

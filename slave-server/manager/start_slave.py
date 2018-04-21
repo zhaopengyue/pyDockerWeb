@@ -3,9 +3,9 @@
 本程序负责启动从服务的心跳服务, 响应服务
 
 """
-from responses import start_response
-from heartbeats import start_heartbeats
-from log import Logging
+from manager.responses import start_response
+from manager.heartbeats import start_heartbeats
+from manager.log import Logging
 
 
 _logger = Logging('start_slave')

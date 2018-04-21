@@ -3,12 +3,10 @@
 本程序用于启动主服务的后台部分,包含解析文件服务,心跳服务
 
 """
-import sys
 import threading
-from response import start_web_server
-from heartbeat import start_heartbeats
-from tools import GlobalMap as Gl
-sys.path.append('..')
+from manager.response import start_web_server
+from manager.heartbeat import start_heartbeats
+from manager.tools import GlobalMap as Gl
 
 # -------------------清理变量---------------- #
 Gl.clean()

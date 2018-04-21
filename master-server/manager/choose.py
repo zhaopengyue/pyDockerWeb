@@ -3,10 +3,10 @@
 本程序实现集群的选取分配及注销
 """
 import threading
-from tools import GlobalMap as Gl
-import log
+from manager.tools import GlobalMap as Gl
+from manager.log import Logging
 
-_logger = log.Logging('choose')
+_logger = Logging('choose')
 _logger.set_file('choose.txt', mode='a')
 
 

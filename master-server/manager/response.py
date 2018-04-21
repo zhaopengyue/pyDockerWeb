@@ -8,10 +8,9 @@ import sys
 from flask import Flask, request, jsonify
 from log import Logging
 from tools import GlobalMap as Gl
-from communication import Image
-from communication import Container
-from communication import System
-sys.path.append('..')
+from manager.communication import Image
+from manager.communication import Container
+from manager.communication import System
 from etc.sys_set import WEB_RESPONSE_HOST, WEB_RESPONSE_PORT
 
 app = Flask(__name__)
