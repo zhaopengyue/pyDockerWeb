@@ -1,0 +1,4 @@
+requests==2.18.4
+Flask==0.12.2
+Flask_RESTful==0.3.6
+docker==2.1.0
