@@ -1,6 +1,8 @@
 var time = 3;
 var cluster_id = window.location.host.split(':')[0];
 var maxLength = 30;
+
+var jquary_table = $("#node-image-server-info");
 // 获取get变量
 function getQueryVariable(variable)
 {
@@ -441,7 +443,7 @@ function download(to_host, image_name, image_server) {
         sync: false,
         success: function (resful, status) {
             if(status && resful['status']) {
-                toastr.info(resful['message']['message'])
+                toastr.info(resful['message']['message']);
                 mk_form(cluster_id);
             }
             else
@@ -449,6 +451,28 @@ function download(to_host, image_name, image_server) {
         }
     })
 }
+
+// 预处理ajax，处理错误
+function xhr() {
+    jquary_table.on('xhr.dt', function (e, settings, json, xhr) {
+        if (! json['status']) {
+            toastr.error(json['message']);
+            json['message'] = {'message': []}
+        }
+        return json;
+    })
+}
+
+// 数据加载异常事件
+function error() {
+    $.fn.dataTable.ext.errMode = 'none';
+    jquary_table.on('error.dt', function (e, settings, techNote, message) {
+        toastr.error(
+            '数据加载时出错' + message.toString()
+        );
+    })
+}
+
 
 function mk_form(cluster_id) {
     if ($('#node-image-server-info').hasClass('dataTable'))
@@ -469,6 +493,8 @@ $(document).ready(function () {
     Mem(node_name);
     disk(node_name);
     container(node_name);
+    xhr();
+    error();
     setInterval(function () {
         Mem(node_name);
         disk(node_name);
