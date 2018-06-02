@@ -180,6 +180,7 @@ sudo vim /etc/systemd/system/pyDockerMaster.service
 $ cat /etc/systemd/system/pyDockerMaster.service 
 [Unit]
 Description=pyDockerWeb master server
+After=docker.target
 [Service]
 Type=simple
 WorkingDirectory=/home/pirate

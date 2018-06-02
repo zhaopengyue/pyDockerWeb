@@ -481,7 +481,8 @@ function mk_form(cluster_id) {
         dttable.fnClearTable(); //清空一下table
         dttable.fnDestroy(); //还原初始化了的datatable
     }
-    init_form(cluster_id);
+    var new_select_node = get_select_node();
+    init_form(new_select_node);
 }
 
 $(document).ready(function () {
