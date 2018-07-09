@@ -91,7 +91,7 @@ class ImageHarbor(object):
                 'star_count': repository.get('star_count'),
                 'update_time': repository.get('update_time')
             })
-        return {'message': info, 'status': True}
+        return {'message': info, 'statusCode': 0, 'errMessage': None}
 
     def request(self, method, url, **kwargs):
         url = self.harbor_url + '/api' + url

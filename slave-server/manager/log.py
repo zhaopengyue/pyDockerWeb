@@ -29,7 +29,7 @@ class Logging(object):
         file_handler.setFormatter(self.formatter)
         self.logger.addHandler(file_handler)
 
-    def write(self, info, level):
+    def write(self, info, level='debug'):
         """ 写入日志
 
         向指定文件中写入日志
@@ -45,5 +45,7 @@ class Logging(object):
             self.logger.warn(info)
         elif level == 'error':
             self.logger.error(info)
+        elif level == 'debug':
+            self.logger.debug(info)
         else:
             pass

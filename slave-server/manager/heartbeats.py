@@ -19,7 +19,7 @@ from etc.core_var import PATTERN_HOST_OBJ
 
 
 _logger = log.Logging('heartbeat')
-_logger.set_file('heartbeat.txt')
+_logger.set_file('heartbeat.log')
 
 
 class SlaveHeartbeats(threading.Thread):
@@ -109,9 +109,7 @@ class SlaveHeartbeats(threading.Thread):
 
 
 def start_heartbeats():
-    print '心跳服务运行中'
-    _logger.write('心跳检测服务已启动', level='info')
+    _logger.write('心跳检测服务已启动')
     heartbeat = SlaveHeartbeats()
     heartbeat.setDaemon(True)
     heartbeat.start()
-    print '心跳服务已启动'

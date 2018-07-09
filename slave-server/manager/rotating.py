@@ -6,7 +6,7 @@ import threading
 import time
 
 import log
-from heartbeats import SlaveHeartbeats
+from manager.heartbeats import SlaveHeartbeats
 from manager.node import Containers
 from manager.node import Images
 

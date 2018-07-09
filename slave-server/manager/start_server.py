@@ -9,7 +9,7 @@ from manager.log import Logging
 
 
 _logger = Logging('start_slave')
-_logger.set_file('start.txt')
+_logger.set_file('start.log')
 
 
 if __name__ == '__main__':
@@ -19,5 +19,5 @@ if __name__ == '__main__':
     try:
         start_response()
     except KeyboardInterrupt:
-        _logger.write('服务已停止', level='info')
+        _logger.write('服务已停止')
         print 'Exited, OK'

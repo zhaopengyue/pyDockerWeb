@@ -16,7 +16,7 @@ DATA_DIR = os.path.join(BASE_DIR, 'data')
 TMP_DIR = os.path.join(BASE_DIR, 'tmp')
 # !系统日志存放位置
 LOG_DIR = os.path.join(BASE_DIR, 'log')
-# !集群信息配置XML文件位置
+# !集群信息配置XML文件位置(以失效, 现在改用DHCP动态加入, 无需配置节点)
 CLUSTER_XML_PATH = os.path.join(ETC_DIR, 'cluster_set.xml')
 # !全局变量管理系统文件存放位置
 GLOBAL_VAL_FILE_PATH = os.path.join(DATA_DIR, 'global_val.json')

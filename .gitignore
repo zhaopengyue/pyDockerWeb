@@ -2,8 +2,11 @@ image-server/.idea
 slave-server/.idea
 master-server/.idea
 image-server/log/*.txt
+image-server/log/*.log
 slave-server/log/*.txt
+slave-server/log/*.log
 master-server/log/*.txt
+master-server/log/*.log
 master-server/data/*.json
 slave-server/data/*.json
 image-server/data/*.json

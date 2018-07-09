@@ -80,6 +80,7 @@ class Receive(threading.Thread):
                     if host not in cluster_all_host_var:
                         # 修改集群配置相关项目
                         cluster_all_host_var.append(host)
+                        # 检查节点所发送的集群id是否存在, 不存在时创建新集群
                         if cluster_id_or_registry_server_port in cluster_all_info_var:
                             if 'node' in cluster_all_info_var[cluster_id_or_registry_server_port]:
                                 cluster_all_info_var[cluster_id_or_registry_server_port]['node'].append({

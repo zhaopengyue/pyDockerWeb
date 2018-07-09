@@ -11,6 +11,7 @@ from flask_restful import reqparse
 from manager.node import Containers
 from manager.node import Images
 from manager.node import System
+from manager.log import Logging
 from etc.sys_set import SLAVE_SERVICE_PORT_VAR, THE_MACHINE_IP
 
 
@@ -18,6 +19,10 @@ APP = Flask(__name__)
 API = Api(APP)
 CONTAINER_OBJ = Containers()
 IMAGE_OBJ = Images()
+
+# 日志处理
+_log = Logging('response')
+_log.set_file('response.log')
 
 
 class Containers(Resource):
@@ -63,32 +68,20 @@ class Container(Resource):
         self.reqparse.add_argument('force', type=bool)
         super(Container, self).__init__()
 
-    def get(self):
+    def get(self, id_):
         """ 获取容器信息
 
         :return:
         {
-        "message":[{
-            "message":{
-                    'id': 镜像id,
-                    'short_id': 镜像短id,
-                    'tags': 镜像标签列表,
-                    'created': 镜像创建日期,
-                    'size': 镜像大小,
-                    'os': 镜像系统
-                } or err_reason,
-            "status": bool.执行状态
-            },...
-            ],
-        "status": bool,
+        "message": {}
+        "statusCode": int,
         "refresh": ,
         "url":
         }
         """
-        args = self.reqparse.parse_args()
-        container_id_or_name = args.get('container_id_or_name')
-        message = CONTAINER_OBJ.get_info(container_id_or_name)
-        message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('container', _external=True)})
+        id_ = str(id_)
+        message = CONTAINER_OBJ.get_info(id_)
+        message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('container', id_=id_, _external=True)})
         return message
 
     def post(self):
@@ -99,6 +92,7 @@ class Container(Resource):
         args = self.reqparse.parse_args()
         container_id_or_name = args.get('container_id_or_name')
         type_ = args.get('type')
+
         if type_ == 'kill':
             signal = args.get('signal', None)
             message = CONTAINER_OBJ.kill(container_id_or_name, signal)
@@ -150,8 +144,9 @@ class Container(Resource):
             message = CONTAINER_OBJ.remove(container_id_or_name, v=v, link=link, force=force)
         else:
             message = {
-                'message': 'container action type: \'' + type_ + '\' not found',
-                'status': False
+                'errMessage': 'container action type: \'' + type_ + '\' not found',
+                'statusCode': 4,
+                'message': None
             }
         message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('container', _external=True)})
         return message
@@ -189,14 +184,13 @@ class Image(Resource):
         self.reqparse.add_argument('repositories', type=list)
         self.reqparse.add_argument('repository', type=str)
 
-    def get(self):
-        args = self.reqparse.parse_args()
-        image_id_or_name = args.get('image_id_or_name')
-        message = IMAGE_OBJ.get_info(image_id_or_name)
+    def get(self, id_):
+        id_ = str(id_)
+        message = IMAGE_OBJ.get_info(id_)
         message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('image', _external=True)})
         return message
 
-    def post(self):
+    def post(self, id_):
         args = self.reqparse.parse_args()
         image_id_or_name = args.get('image_id_or_name')
         type_ = args.get('type')
@@ -205,21 +199,21 @@ class Image(Resource):
             if not force:
                 force = False
             message = IMAGE_OBJ.remove(image_id_or_name, force)
-        # elif type_ == 'remove_list':
-        #     images_list = args.get('repositories')
-        #     force = args.get('force', False)
-        #     if not force:
-        #         force = False
-        #     message = IMAGE_OBJ.remove_list(images_list, force)
+        elif type_ == 'remove_list':
+            images_list = args.get('repositories')
+            force = args.get('force', False)
+            if not force:
+                force = False
+            message = IMAGE_OBJ.remove_list(images_list, force)
         elif type_ == 'pull':
             repository = args.get('repository')
             tag = args.get('tag', 'latest')
             if not tag:
                 tag = 'latest'
             message = IMAGE_OBJ.pull(repository, tag)
-        # elif type_ == 'pull_list':
-        #     repositories = args.get('repositories')
-        #     message = IMAGE_OBJ.pull_list(repositories)
+        elif type_ == 'pull_list':
+            repositories = args.get('repositories')
+            message = IMAGE_OBJ.pull_list(repositories)
         elif type_ == 'search':
             repository = args.get('repository')
             message = IMAGE_OBJ.search(repository)
@@ -230,8 +224,9 @@ class Image(Resource):
             message = IMAGE_OBJ.tag(image_id_or_name, repository, tag, force=force)
         else:
             message = {
-                'message': 'image action type: \'' + type_ + '\' not found',
-                'status': False
+                'errMessage': 'image action type: \'' + type_ + '\' not found',
+                'statusCode': 4,
+                'message': None
             }
         message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('image', _external=True)})
         return message
@@ -255,8 +250,25 @@ class Sys(Resource):
             message = System.get_cpu_info()
         else:
             message = {
-                'message': 'system type: \'' + type_ + '\' not found',
-                'status': False
+                'errMessage': 'system type: \'' + type_ + '\' not found',
+                'statusCode': 4,
+                'message': None
+            }
+        message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('system', _external=True)})
+        return message
+
+    def post(self, type_):
+        if type_ == 'mem':
+            message = System.get_mem_info()
+        elif type_ == 'disk':
+            message = System.get_disk_info()
+        elif type_ == 'cpu':
+            message = System.get_cpu_info()
+        else:
+            message = {
+                'errMessage': 'system type: \'' + type_ + '\' not found',
+                'statusCode': 4,
+                'message': None
             }
         message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('system', _external=True)})
         return message

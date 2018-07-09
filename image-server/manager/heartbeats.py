@@ -18,7 +18,7 @@ from etc.core_var import PATTERN_HOST_OBJ
 
 
 _logger = log.Logging('heartbeat')
-_logger.set_file('heartbeat.txt')
+_logger.set_file('heartbeat.log')
 
 
 class ImageHeartbeats(threading.Thread):

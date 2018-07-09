@@ -6,16 +6,97 @@ import json
 import sys
 import re
 import requests
-from manager import log
 from requests.exceptions import ConnectionError
+
+from manager.log import Logging
 from manager.tools import GlobalMap as Gl
 from etc.sys_set import SLAVE_SERVICE_PORT_VAR
 from etc.sys_set import IMAGE_SERVER_PORT_VAR
 
 
 _root_url = 'http://{host}:{port}/{root_path}/{type_path}'
-_logger = log.Logging('communication')
-_logger.set_file('communication.txt')
+
+# 日志文件配置
+_logger = Logging('communication')
+_logger.set_file('communication.log')
+
+
+def format_result(func):
+    """ 处理输出结果, 并标准化返回结果
+
+    格式化前函数需要返回 statusCode, message, errMessage
+
+    ***仅包装批量操作函数***
+    格式化输出结果, 对函数数输出结果进行二次包装. 包装结果为
+    {
+        "statusCode": 执行结果状态码
+        "message":    message 具体见接口文档
+        "errMessage": errMessage
+    }
+    :param func:
+    :return:
+    """
+    def wrapper(*args, **kwargs):
+        status_code, message, err_message = func(*args, **kwargs)
+        if status_code == 0:
+            err_message = None
+        if status_code > 1:
+            message = None
+        return {
+            'statusCode': status_code,
+            'message': message,
+            'err_message': err_message
+        }
+    return wrapper
+
+
+def host_validation(func):
+    """ 验证单个host是否合法
+
+    :param func:
+    :return:
+    """
+    def wrapper(host, *args, **kwargs):
+        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
+        cluster_all_hosts = Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])
+        if host not in cluster_all_hosts or host not in cluster_status or not cluster_status.get(host).get('status'):
+            err_message = '节点Host: \'' + host + '\'非法'
+            _logger.write(err_message, level='warn')
+            return {
+                'statusCode': 6,
+                'errMessage': err_message,
+                'message': None
+            }
+        try:
+            return func(host, *args, **kwargs)
+        except ConnectionError, e:
+            return {
+                'statusCode': 6,
+                'errMessage': '\'' + host + '\'连接失败',
+                'message': None
+            }
+    return wrapper
+
+
+def hosts_validation(func):
+    """ 验证host列表,筛选出可用host
+
+    :param func:
+    :return:
+    """
+    def wrapper(hosts, *args, **kwargs):
+        if not isinstance(hosts, list):
+            return 3, '', '参数非列表格式'
+        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
+        cluster_all_hosts = Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])
+        available_hosts = []
+        for host in hosts:
+            if host in cluster_all_hosts and host in cluster_status and cluster_status.get(host).get('status'):
+                available_hosts.append(host)
+        if available_hosts.__len__() != 0:
+            return func(available_hosts, *args, **kwargs)
+        else:
+            return 6, None, '列表中无可用节点'
 
 
 class Container(object):
@@ -24,18 +105,21 @@ class Container(object):
     """
 
     @staticmethod
+    @format_result
     def get_all_containers(cluster_id):
-        """获取容器列表,获取所有容器列表
+        """ 获取容器列表,获取所有容器列表
 
         构建url请求,向指定从节点发送获取容器列表请求
 
         :param cluster_id: 要获取的集群ID
-        :return:
+        :return:[
         {
-            "host1" : {
-                "status": ,
-                "refresh": ,请求回执, status为True时才可显示
-                "url": ,    请求url, status为True时才可显示
+            "host": host,    IP
+            "message" : {
+                "statusCode": 状态码,
+                "refresh": ,请求回执,
+                "url": ,    请求url,
+                "errMessage": 错误信息
                 "message": [
                     {
                         message: {
@@ -49,34 +133,30 @@ class Container(object):
                             'image': 容器依赖镜像,
                             'exit_time': 容器退出时间.
                         },
-                        'status': bool
+                        'statusCode': int
+                        'errMessage': str
                     },...
                 ]
-            },
-            "host2": {
-                ...
-            }, ...
-        } or (部分节点无效时)
-        {
-            "host1": {
-                "status": ,
-                "message": error_reason
-            },
-            "host2": {
-                ...
             }
-        } or (集群不可用或未找到)
-        {}
+        }, {}...]
         """
-        containers_dict = {}
+        # 状态码
+        status_code = 0
+        containers_dict = []
+        err_message = ''
         cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
+        _logger.write(cluster_status.__str__())
         cluster_all_id = Gl.get_value('CLUSTER_ALL_ID_VAR', [])
+        _logger.write(cluster_all_id.__str__())
         cluster_all_info = Gl.get_value('CLUSTER_ALL_INFO_VAR', {})
+        _logger.write(cluster_all_info.__str__())
+        # 验证ID
         if cluster_id not in cluster_all_id:
             _logger.write('集群ID: \'' + cluster_id + '\'未找到', 'warn')
-            return {}
+            return 5, '', '集群ID' + cluster_id + '未找到'
         for node in cluster_all_info.get(cluster_id).get('node'):
             node_host = node.get('host')
+            # 验证节点状态
             if node_host not in cluster_status or not cluster_status.get(node_host).get('status'):
                 continue
             rq_url = _root_url.format(
@@ -88,13 +168,105 @@ class Container(object):
             try:
                 rq_obj = requests.get(rq_url)
                 rq_result = json.loads(rq_obj.text)
+                node_err_message = rq_result.get('errMessage')
+                if not node_err_message:
+                    err_message = err_message + rq_result.get('errMessage') + '\n'
             except ConnectionError:
+                # 连接失败, 该节点标记为失败
+                node_status_code = 6
                 _logger.write(str(node_host) + '连接失败', 'warn')
-                rq_result = {'message': str(node_host) + ' connect fail', 'status': False}
-            containers_dict.update({node_host: rq_result})
-        return containers_dict
+                err_message = err_message + '\'' + str(node_host) + '\'连接失败\n'
+                rq_result = {
+                    'message': None,
+                    'statusCode': node_status_code,
+                    'errMessage': err_message
+                }
+            # 存在失败情况
+            if rq_result.get('statusCode') > 0:
+                # 设置整体statusCode为1
+                status_code = 1
+            containers_dict.append({
+                'host': node_host,
+                'message': rq_result
+            })
+        return status_code, containers_dict, err_message
 
     @staticmethod
+    @format_result
+    @hosts_validation
+    def get_all_containers_by_list(hosts):
+        """ 通过IP列表获取容器信息
+
+        :param hosts: IP 列表
+        :return:
+        [
+        {
+            "host": host,    IP
+            "message" : {
+                "statusCode": 状态码,
+                "refresh": ,请求回执,
+                "url": ,    请求url,
+                "errMessage": 错误信息
+                "message": [
+                    {
+                        message: {
+                            'id': 容器id,
+                            'short_id': 容器短id,
+                            'status': 容器状态,
+                            'running': 容器是否在运行,
+                            'finishedAt': 容器退出时间,
+                            'startedAt': 容器开始时间,
+                            'created': 容器创建日期
+                            'image': 容器依赖镜像,
+                            'exit_time': 容器退出时间.
+                        },
+                        'statusCode': int
+                        'errMessage': str
+                    },...
+                ]
+            }
+        }, {}...]
+        """
+        # 状态码
+        status_code = 0
+        containers_dict = []
+        err_message = ''
+        for node in hosts:
+            node_host = node.get('host')
+            rq_url = _root_url.format(
+                host=node_host,
+                port=SLAVE_SERVICE_PORT_VAR,
+                root_path='container',
+                type_path='_all'
+            )
+            try:
+                rq_obj = requests.get(rq_url)
+                rq_result = json.loads(rq_obj.text)
+                node_err_message = rq_result.get('errMessage')
+                if not node_err_message:
+                    err_message = err_message + rq_result.get('errMessage') + '\n'
+            except ConnectionError:
+                # 连接失败, 该节点标记为失败
+                node_status_code = 6
+                _logger.write(str(node_host) + '连接失败', 'warn')
+                err_message = err_message + '\'' + str(node_host) + '\'连接失败\n'
+                rq_result = {
+                    'message': None,
+                    'statusCode': node_status_code,
+                    'errMessage': err_message
+                }
+            # 存在失败情况
+            if rq_result.get('statusCode') > 0:
+                # 设置整体statusCode为1
+                status_code = 1
+            containers_dict.append({
+                'host': node_host,
+                'message': rq_result
+            })
+        return status_code, containers_dict, err_message
+
+    @staticmethod
+    @host_validation
     def get_container(host):
         """获取单个节点容器信息
 
@@ -122,37 +294,25 @@ class Container(object):
                     ...
                 },...
             ],
-            "status": bool,
+            "statusCode": int,
             "refresh": ,
-            "url":
-        } or
-        {
-            "message": error_reason,
-            "status":
+            "url":,
+            "errMessage": str
         }
         """
-        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
-        cluster_all_hosts = Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])
-        if host not in cluster_all_hosts:
-            _logger.write('节点Host: \'' + host + '\'无效', level='warn')
-            return {'message': 'host unavailable', 'status': False}
-        if host not in cluster_status or not cluster_status.get(host).get('status'):
-            return {'message': 'type error', 'status': False}
+        # 错误码
         rq_url = _root_url.format(
             host=host,
             port=SLAVE_SERVICE_PORT_VAR,
             root_path='container',
             type_path='_all'
         )
-        try:
-            rq_obj = requests.get(rq_url)
-            containers_list = json.loads(rq_obj.text)
-        except ConnectionError:
-            _logger.write(str(host) + '连接失败', 'warn')
-            return {'message': 'node connect fail', 'status': False}
-        return containers_list
+        rq_obj = requests.get(rq_url)
+        rq_result = json.loads(rq_obj.text)
+        return rq_result
 
     @staticmethod
+    @host_validation
     def operator_container(host, action_type, container_id_or_name, **kwargs):
         """ 操作容器
 
@@ -169,7 +329,7 @@ class Container(object):
                 restart: 可附带单数为
                             timeout, .int(默认值为10)
                 rename: 必须附带参数
-                            new_name .str(新的镜像名)
+                            new_name .str(新的容器名)
                 pause:
                 logs: 可附带参数为
                             stderr .bool(标准错误流.默认True);
@@ -191,20 +351,21 @@ class Container(object):
         :return:
         {
             "message": ,  #请求结果.str
-            "status": ,   #执行状态.bool
+            "statusCode": ,   #状态码.int
             "url": ,      #请求url.str
             "refresh":    #请求回执时间.str
-        } or
-        {
-            "message": error_reason,.str
-            "status": False.bool
+            "errMessage": #错误信息, str
         }
         """
         _allow_action = ['start', 'stop', 'restart', 'rename', 'logs', 'pause', 'commit', 'kill', 'remove', 'unpause']
-        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
-        if action_type not in _allow_action or host not in cluster_status or not cluster_status.get(host).get('status'):
-            _logger.write('节点Host: \'' + str(host) + '\'无效或本Host不可用', level='warn')
-            return {'message': 'host unavailable', 'status': False}
+        if action_type not in _allow_action:
+            err_message = '\'' + action_type + '\'不合法'
+            _logger.write(err_message, level='warn')
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
         rq_url = _root_url.format(
             host=host,
             port=SLAVE_SERVICE_PORT_VAR,
@@ -212,18 +373,99 @@ class Container(object):
             type_path=''
         )
         if 'type' in kwargs or 'container_id_or_name' in kwargs:
-            return {'message': 'type error', 'status': False}
+            err_message = '函数传参异常'
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
         rq_args = {'type': action_type, 'container_id_or_name': container_id_or_name}
         rq_args.update(kwargs)
-        try:
-            rq_obj = requests.post(rq_url, json=rq_args)
-            exec_result = json.loads(rq_obj.text)
-            return exec_result
-        except ConnectionError:
-            _logger.write(str(host) + '连接失败', 'warn')
-            return {'message': 'host connect fail', 'status': False}
+        rq_obj = requests.post(rq_url, json=rq_args)
+        rq_result = json.loads(rq_obj.text)
+        return rq_result
 
     @staticmethod
+    @format_result
+    @hosts_validation
+    def operator_container_by_hosts(hosts, action_type, containers, **kwargs):
+        """ 通过IP 列表进行对节点进行批量操作
+
+        由于批量操作, 故仅允许进行 kill, start, stop, restart, pause, unpause
+        要求containers与hosts一一对应
+
+        :param hosts 所要操作的IP列表
+        :param action_type 动作类型
+        :param containers 容器列表
+        :return:
+        """
+        _allow_action = ['kill', 'start', 'stop', 'restart', 'pause', 'unpause']
+        err_message = ''
+        status_code = 0
+        exec_result = []
+        if action_type not in _allow_action:
+            err_message = '\'' + action_type + '\'不合法'
+            _logger.write(err_message, level='warn')
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
+        if hosts.__len__() != containers.__len__():
+            err_message = '节点表与容器id表不匹配'
+            _logger.write(err_message, 'warn')
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
+        if 'type' in kwargs or 'containers' in kwargs:
+            err_message = '函数传参异常'
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
+        for index in xrange(hosts.__len__()):
+            host = hosts[index]
+            container = containers[index]
+            rq_url = _root_url.format(
+                host=host,
+                port=SLAVE_SERVICE_PORT_VAR,
+                root_path='container',
+                type_path=''
+            )
+            rq_args = {'type': action_type, 'container_id_or_name': container}
+            rq_args.update(kwargs)
+            try:
+                rq_obj = requests.get(rq_url)
+                rq_result = json.loads(rq_obj.text)
+                node_err_message = rq_result.get('errMessage')
+                if not node_err_message:
+                    err_message = node_err_message + rq_result.get('errMessage') + '\n'
+            except ConnectionError:
+                # 连接失败, 该节点标记为失败
+                node_status_code = 6
+                _logger.write(str(host) + '连接失败', 'warn')
+                err_message = err_message + '\'' + str(host) + '\'连接失败\n'
+                rq_result = {
+                    'message': None,
+                    'statusCode': node_status_code,
+                    'errMessage': err_message
+                }
+                # 存在失败情况
+            if rq_result.get('statusCode') > 0:
+                # 设置整体statusCode为1
+                status_code = 1
+            exec_result.append({
+                'host': host,
+                'message': rq_result,
+                'container': container
+            })
+        return status_code, exec_result, err_message
+
+    @staticmethod
+    @host_validation
     def create_container_shell(host, cmd):
         """ 创建容器
 
@@ -234,20 +476,22 @@ class Container(object):
         :param cmd:
         :return:
         {
-            "message": , error_reason or container_id
-            "status": ,
+            "message": ,
+            "statusCode": ,
             'url': ,
-            'refresh':
+            'refresh':,
+            'errMessage':
         }
         """
-        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
-        if host not in cluster_status or not cluster_status.get(host).get('status'):
-            _logger.write('节点Host: \'' + host + '\'无效或本Host不可用', level='warn')
-            return {'message': 'host unavailable', 'status': False}
         pattern_cmd = '^docker\s+(run|create)\s+.*'
         if re.match(pattern_cmd, cmd) is None:
-            _logger.write('执行出错: 命令不合法', level='warn')
-            return {'message': 'illegal command', 'status': False}
+            err_message = '执行出错: 命令不合法'
+            _logger.write(err_message, level='warn')
+            return {
+                'message': None,
+                'statusCode': 6,
+                'errMessage': err_message
+            }
         rq_url = _root_url.format(
             host=host,
             port=SLAVE_SERVICE_PORT_VAR,
@@ -261,7 +505,7 @@ class Container(object):
             return exec_result
         except ConnectionError:
             _logger.write(str(host) + '连接失败', 'warn')
-            return {'message': 'host connect fail', 'status': False}
+            return {'message': None, 'statusCode': 6, 'errMessage': str(host) + '连接失败'}
 
     # @staticmethod
     # def create_container_args(host, **args):
@@ -283,55 +527,49 @@ class Image(object):
     """
 
     @staticmethod
+    @format_result
     def get_all_images(cluster_id):
         """
 
         :param cluster_id: 集群ID
         :return:
-        {
-            "host1" : {
-                "status": ,
-                "refresh": ,
-                "url": ,
-                "message": [
-                    {
-                        "message":{
-                            'id': 镜像id,
-                            'short_id': 镜像短id,
-                            'tags': 镜像标签列表,
-                            'created': 镜像创建日期,
-                            'size': 镜像大小,
-                            'os': 镜像系统
-                        } or err_reason,
-                    },...
-                ]
-            },
-            "host2": {
-                ...
-            }, ...
-        } or
-        {
-            "host1": {
-                "status":,
-                "message": error_reason,
-            },
-            "host2": {
-                "status":,
-                "message": error_reason
-            },
-            ...
-        } or
-        {
-
-        }
+        [
+            {
+                "host": host,
+                "message": {
+                    "statusCode": ,
+                    "refresh": ,
+                    "url": ,
+                    "message": [
+                        {
+                            "message": {
+                                'id': 镜像id,
+                                'short_id': 镜像短id,
+                                'tags': 镜像标签列表,
+                                'created': 镜像创建日期,
+                                'size': 镜像大小,
+                                'os': 镜像系统
+                            },
+                            "statusCode": ,
+                            "errMessage":
+                        },
+                        {}
+                    ],
+                    "errMessage":
+                }
+            }, {}, ...
+        ]
         """
-        images_dict = {}
+        images_list = []
+        err_message = ''
+        status_code = 0
         cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
         cluster_all_id = Gl.get_value('CLUSTER_ALL_ID_VAR', [])
         cluster_all_info = Gl.get_value('CLUSTER_ALL_INFO_VAR', {})
         if cluster_id not in cluster_all_id:
-            _logger.write('集群ID: \'' + cluster_id + '\'未找到', 'warn')
-            return {'message': 'node unavailable', 'status': False}
+            err_message = '集群ID: \'' + cluster_id + '\'未找到'
+            _logger.write(err_message, 'warn')
+            return 5, '', err_message
         for node in cluster_all_info.get(cluster_id).get('node'):
             node_host = node.get('host')
             if node_host not in cluster_status or not cluster_status.get(node_host).get('status'):
@@ -345,13 +583,103 @@ class Image(object):
             try:
                 rq_obj = requests.get(rq_url)
                 rq_result = json.loads(rq_obj.text)
+                node_err_message = rq_result.get('errMessage')
+                if not node_err_message:
+                    err_message = node_err_message + rq_result.get('errMessage') + '\n'
             except ConnectionError:
+                # 连接失败, 该节点标记为失败
+                node_status_code = 6
                 _logger.write(str(node_host) + '连接失败', 'warn')
-                rq_result = {'message': 'node connect fail', 'status': False}
-            images_dict.update({node_host: rq_result})
-        return images_dict
+                err_message = err_message + '\'' + str(node_host) + '\'连接失败\n'
+                rq_result = {
+                    'message': None,
+                    'statusCode': node_status_code,
+                    'errMessage': err_message
+                }
+                # 存在失败情况
+            if rq_result.get('statusCode') > 0:
+                # 设置整体statusCode为1
+                status_code = 1
+            images_list.append({
+                'host': node_host,
+                'message': rq_result
+            })
+        return status_code, images_list, err_message
 
     @staticmethod
+    @format_result
+    @hosts_validation
+    def get_all_images_by_list(hosts):
+        """ 通过IP列表获取镜像列表
+
+        :param hosts: IP列表
+        :return:
+        [
+            {
+                "host": host,
+                "message": {
+                    "statusCode": ,
+                    "refresh": ,
+                    "url": ,
+                    "message": [
+                        {
+                            "message": {
+                                'id': 镜像id,
+                                'short_id': 镜像短id,
+                                'tags': 镜像标签列表,
+                                'created': 镜像创建日期,
+                                'size': 镜像大小,
+                                'os': 镜像系统
+                            },
+                            "statusCode": ,
+                            "errMessage":
+                        },
+                        {}
+                    ],
+                    "errMessage":
+                }
+            }, {}, ...
+        ]
+        """
+        err_message = ''
+        status_code = 0
+        images_list = []
+        for host in hosts:
+            node_host = host.get('host')
+            rq_url = _root_url.format(
+                host=node_host,
+                port=SLAVE_SERVICE_PORT_VAR,
+                root_path='image',
+                type_path='_all'
+            )
+            try:
+                rq_obj = requests.get(rq_url)
+                rq_result = json.loads(rq_obj.text)
+                node_err_message = rq_result.get('errMessage')
+                if not node_err_message:
+                    err_message = node_err_message + rq_result.get('errMessage') + '\n'
+            except ConnectionError:
+                # 连接失败, 该节点标记为失败
+                node_status_code = 6
+                _logger.write(str(node_host) + '连接失败', 'warn')
+                err_message = err_message + '\'' + str(node_host) + '\'连接失败\n'
+                rq_result = {
+                    'message': None,
+                    'statusCode': node_status_code,
+                    'errMessage': err_message
+                }
+                # 存在失败情况
+            if rq_result.get('statusCode') > 0:
+                # 设置整体statusCode为1
+                status_code = 1
+            images_list.append({
+                'host': node_host,
+                'message': rq_result
+            })
+            return status_code, images_list, err_message
+
+    @staticmethod
+    @host_validation
     def get_image(host):
         """获取单个节点容器信息
 
@@ -360,43 +688,30 @@ class Image(object):
         :param host: 要查询的节点Host
         :return:
         {
-        "message":[{
             "message":{
-                    'id': 镜像id,
-                    'short_id': 镜像短id,
-                    'tags': 镜像标签列表,
-                    'created': 镜像创建日期,
-                    'size': 镜像大小,
-                    'os': 镜像系统
-                } or err_reason,
-            "status": bool.执行状态
-            },...
-            ],
-        "status": bool
+                'id': 镜像id,
+                'short_id': 镜像短id,
+                'tags': 镜像标签列表,
+                'created': 镜像创建日期,
+                'size': 镜像大小,
+                'os': 镜像系统
+            },
+            "statusCode": int.执行状态,
+            "errMessage": str
         }
         """
-        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
-        cluster_all_hosts = Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])
-        if host not in cluster_all_hosts:
-            _logger.write('节点Host: \'' + host + '\'无效', level='warn')
-            return {'message': 'node unavailable', 'status': False}
-        if host not in cluster_status or not cluster_status.get(host).get('status'):
-            return {'message': 'node unavailable', 'status': False}
         rq_url = _root_url.format(
             host=host,
             port=SLAVE_SERVICE_PORT_VAR,
             root_path='image',
             type_path='_all'
         )
-        try:
-            rq_obj = requests.get(rq_url)
-            images_info = json.loads(rq_obj.text)
-        except ConnectionError:
-            _logger.write(str(host) + '连接失败', 'warn')
-            return {'message': 'node connect fail', 'status': False}
+        rq_obj = requests.get(rq_url)
+        images_info = json.loads(rq_obj.text)
         return images_info
 
     @staticmethod
+    @host_validation
     def operator_image(host, action_type, image_id_or_name, **kwargs):
         """ 操作镜像
 
@@ -415,36 +730,115 @@ class Image(object):
         :param kwargs: 以上可附加变量
         :return:
         {
-            "message":'ok' or err_reason,
-            "status": .bool(执行状态)
+            "message":'ok',
+            "statusCode": .bool(执行状态),
+            "errMessage":
             "url": .str(请求url,status 为True时显示)
             "refresh": .str(请求回执时间 ,status为True时显示)
         }
         """
         _allow_action = ['remove', 'tag', 'search']
-        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
-        if action_type not in _allow_action or host not in cluster_status or not cluster_status.get(host).get('status'):
-            _logger.write('节点Host: \'' + host + '\'无效或本Host不可用', level='warn')
-            return {'message': 'node unavailable', 'status': False}
+        if action_type not in _allow_action or 'type' in kwargs or 'image_id_or_name' in kwargs:
+            err_message = '函数传参异常'
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
         rq_url = _root_url.format(
             host=host,
             port=SLAVE_SERVICE_PORT_VAR,
             root_path='image',
             type_path=''
         )
-        if 'type' in kwargs or 'image_id_or_name' in kwargs:
-            return {'message': 'type error', 'status': False}
         rq_args = {'type': action_type, 'image_id_or_name': image_id_or_name}
         rq_args.update(kwargs)
-        try:
-            rq_obj = requests.post(rq_url, json=rq_args)
-            exec_result = json.loads(rq_obj.text)
-            return exec_result
-        except ConnectionError:
-            _logger.write(str(host) + '连接失败', 'warn')
-            return {'message': 'connect fail', 'status': False}
+        rq_obj = requests.post(rq_url, json=rq_args)
+        exec_result = json.loads(rq_obj.text)
+        return exec_result
 
     @staticmethod
+    @format_result
+    @hosts_validation
+    def operator_images_by_list(hosts, action_type, images, **kwargs):
+        """ 通过IP 列表进行对节点进行批量操作
+
+        由于批量操作, 故仅允许进行 remove操作
+        要求images与hosts一一对应
+
+        :param hosts 所要操作的IP列表
+        :param action_type 动作类型
+        :param images 容器列表
+        :return:
+        """
+        _allow_action = ['remove']
+        err_message = ''
+        status_code = 0
+        exec_result = []
+        if action_type not in _allow_action:
+            err_message = '\'' + action_type + '\'不合法'
+            _logger.write(err_message, level='warn')
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
+        if hosts.__len__() != images.__len__():
+            err_message = '节点表与镜像id表不匹配'
+            _logger.write(err_message, 'warn')
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
+        if 'type' in kwargs or 'images' in kwargs:
+            err_message = '函数传参异常'
+            return {
+                'statusCode': 3,
+                'errMessage': err_message,
+                'message': None
+            }
+        for index in xrange(hosts.__len__()):
+            host = hosts[index]
+            image = images[index]
+            rq_url = _root_url.format(
+                host=host,
+                port=SLAVE_SERVICE_PORT_VAR,
+                root_path='image',
+                type_path=''
+            )
+            rq_args = {'type': action_type, 'image_id_or_name': image}
+            rq_args.update(kwargs)
+            try:
+                rq_obj = requests.get(rq_url)
+                rq_result = json.loads(rq_obj.text)
+                node_err_message = rq_result.get('errMessage')
+                if not node_err_message:
+                    err_message = node_err_message + rq_result.get('errMessage') + '\n'
+            except ConnectionError:
+                # 连接失败, 该节点标记为失败
+                node_status_code = 6
+                _logger.write(str(host) + '连接失败', 'warn')
+                err_message = err_message + '\'' + str(host) + '\'连接失败\n'
+                rq_result = {
+                    'message': None,
+                    'statusCode': node_status_code,
+                    'errMessage': err_message
+                }
+                # 存在失败情况
+            if rq_result.get('statusCode') > 0:
+                # 设置整体statusCode为1
+                status_code = 1
+            exec_result.append({
+                'host': host,
+                'message': rq_result,
+                'image': image
+            })
+        return status_code, exec_result, err_message
+
+    @staticmethod
+    @format_result
+    @host_validation
     def download_image(download_to_host, image_server_host, repository):
         """ 下载镜像
 
@@ -456,24 +850,22 @@ class Image(object):
         :return:
         {
             "message": ,
-            "status": ,
+            "statusCode": ,
             "refresh": ,
-            "url":
-        } or
-        {
-            "message": ,
-            "status":
+            "url": ,
+            "errMessage":
         }
         """
-        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
+        # 验证image server状态
         image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
         all_image_server_info_var = Gl.get_value('ALL_IMAGE_SERVER_INFO_VAR', {})
-        if download_to_host not in cluster_status or not cluster_status.get(download_to_host).get('status'):
-            _logger.write('节点Host: \'' + str(download_to_host) + '\'无效或本Host不可用', level='warn')
-            return {'message': 'node unavailable', 'status': False}
         if image_server_host not in image_server_status or not image_server_status.get(image_server_host).get('status'):
             _logger.write('镜像服务器Host: \'' + str(image_server_host) + '\'无效或本Host不可用', level='warn')
-            return {'message': 'image server unavailable', 'status': False}
+            return {
+                'statusCode': 7,
+                'errMessage': '镜像服务器Host: \'' + str(image_server_host) + '\'无效或本Host不可用',
+                'message': None
+            }
         registry_server_port = all_image_server_info_var.get(image_server_host).get('registry_port')
         # 提取tag
         try:
@@ -494,13 +886,88 @@ class Image(object):
             'tag':  repository_tag,
             'type': 'pull'
         }
-        try:
-            rq_obj = requests.post(rq_url, json=rq_args)
-            exec_result = json.loads(rq_obj.text)
-        except ConnectionError:
-            _logger.write(str(download_to_host) + '连接失败', 'warn')
-            exec_result = {'message': 'host connect fail', 'status': False}
+        rq_obj = requests.post(rq_url, json=rq_args)
+        exec_result = json.loads(rq_obj.text)
         return exec_result
+
+    @staticmethod
+    @format_result
+    @hosts_validation
+    def download_images_by_list(hosts, image_server_host, repositories):
+        """ 从harbor仓库批量下载镜像
+
+        :param hosts:
+        :param image_server_host:
+        :param repositories:
+        :return:
+        """
+        if not isinstance(repositories, list):
+            return {
+                'statusCode': 3,
+                'errMessage': '函数传参错误',
+                'message': None
+            }
+        # 验证image server状态
+        image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
+        all_image_server_info_var = Gl.get_value('ALL_IMAGE_SERVER_INFO_VAR', {})
+        if image_server_host not in image_server_status or not image_server_status.get(image_server_host).get('status'):
+            _logger.write('镜像服务器Host: \'' + str(image_server_host) + '\'无效或本Host不可用', level='warn')
+            return {
+                'statusCode': 7,
+                'errMessage': '镜像服务器Host: \'' + str(image_server_host) + '\'无效或本Host不可用',
+                'message': None
+            }
+        registry_server_port = all_image_server_info_var.get(image_server_host).get('registry_port')
+        download_status = []
+        err_message = ''
+        status_code = 0
+        for host in hosts:
+            for repository in repositories:
+                # 提取tag
+                try:
+                    repository_tag = repository.split(':')[1]
+                except IndexError:
+                    repository_tag = None
+                # 拼接仓库名
+                repository = image_server_host + ':' + str(registry_server_port) + '/' + repository.split(':')[0]
+                print repository
+                rq_url = _root_url.format(
+                    host=host,
+                    port=SLAVE_SERVICE_PORT_VAR,
+                    root_path='image',
+                    type_path=''
+                )
+                rq_args = {
+                    'repository': repository,
+                    'tag': repository_tag,
+                    'type': 'pull'
+                }
+                try:
+                    rq_obj = requests.post(rq_url, json=rq_args)
+                    rq_result = json.loads(rq_obj.text)
+                    node_err_message = rq_result.get('errMessage')
+                    if not node_err_message:
+                        err_message = node_err_message + rq_result.get('errMessage') + '\n'
+                except ConnectionError:
+                    # 连接失败, 该节点标记为失败
+                    node_status_code = 6
+                    _logger.write(str(host) + '连接失败', 'warn')
+                    err_message = err_message + '\'' + str(host) + '\'连接失败\n'
+                    rq_result = {
+                        'message': None,
+                        'statusCode': node_status_code,
+                        'errMessage': err_message
+                    }
+                    # 存在失败情况
+                if rq_result.get('statusCode') > 0:
+                    # 设置整体statusCode为1
+                    status_code = 1
+                download_status.append({
+                    'host': host,
+                    'message': rq_result,
+                    'repository': repository
+                })
+        return status_code, download_status, err_message
 
     @staticmethod
     def get_image_server_list():
@@ -509,7 +976,7 @@ class Image(object):
         :return:['image_server_host_1', 'image_server_host_2', ...]
         """
         all_image_server_host_var = Gl.get_value('ALL_IMAGE_SERVER_HOST_VAR', [])
-        return {'message': all_image_server_host_var, 'status': True}
+        return {'message': all_image_server_host_var, 'statusCode': 0, 'errMessage': None}
 
     @staticmethod
     def get_alive_image_server_list():
@@ -525,9 +992,9 @@ class Image(object):
                 continue
             info.append(image_server)
         if info.__len__() > 0:
-            return {'message': info, 'status': True}
+            return {'message': info, 'statusCode': 0, 'errMessage': None}
         else:
-            return {'message': info, 'status': False}
+            return {'message': None, 'statusCode': 7, 'errMessage': 'No mirror server is available.'}
 
     @staticmethod
     def get_image_server_harbor(image_server):
@@ -539,19 +1006,19 @@ class Image(object):
         image_server_status = Gl.get_value('IMAGE_SERVER_STATUS_VAR', {})
         if image_server not in image_server_status or not image_server_status.get(image_server).get('status'):
             _logger.write('镜像服务器Host: \'' + str(image_server) + '\'无效或本Host不可用', level='warn')
-            return {'message': 'image server unavailable', 'status': False}
+            return {
+                'errMessage': '镜像服务器不可用',
+                'statusCode': 7,
+                'message': None
+            }
         rq_url = _root_url.format(
             host=image_server,
             port=IMAGE_SERVER_PORT_VAR,
             root_path='image_harbor_server',
             type_path=''
         )
-        try:
-            rq_obj = requests.get(rq_url)
-            exec_result = json.loads(rq_obj.text)
-        except ConnectionError:
-            _logger.write(str(image_server) + '连接失败', 'warn')
-            exec_result = {'message': 'image server connect fail', 'status': False}
+        rq_obj = requests.get(rq_url)
+        exec_result = json.loads(rq_obj.text)
         return exec_result
 
 
@@ -561,6 +1028,7 @@ class System(object):
     """
 
     @staticmethod
+    @format_result
     def get_all_system(cluster_id, type_):
         """ 获取系统信息列表
 
@@ -568,18 +1036,39 @@ class System(object):
 
         :param type_: 信息类型. 值类型为mem, disk, cpu
         :param cluster_id: 要获取的集群ID
-        :return: [] or None
+        :return:
+        [
+            {
+                "host": host    IP
+                "message": {
+                    'message': {
+        #由具体值定       'total_mem':, 内存总量
+                        'free_mem': , 空闲内存量
+                        'active_mem': 使用内存量
+                        'cache/buffer_mem': 缓存量
+                    },
+                    'statusCode': ,
+                    'errorMessage':
+                },
+                "errMessage": ,
+                "statusCode": ,
+                "refresh":,
+                "url":
+            }
+        ]
         """
-        system_info_list = {}
+        system_info_list = []
+        status_code = 0
+        err_message = ''
         _allow_type = ['mem', 'disk', 'cpu']
         if type_ not in _allow_type:
-            return {'message': 'type error', 'status': False}
+            return 3, '', '函数传参错误'
         cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
         cluster_all_id = Gl.get_value('CLUSTER_ALL_ID_VAR', [])
         cluster_all_info = Gl.get_value('CLUSTER_ALL_INFO_VAR', {})
         if cluster_id not in cluster_all_id:
             _logger.write('集群ID: \'' + cluster_id + '\'未找到', 'warn')
-            return {}
+            return 5, '', '集群ID' + cluster_id + '未找到'
         for node in cluster_all_info.get(cluster_id).get('node'):
             node_host = node.get('host')
             if node_host not in cluster_status or not cluster_status.get(node_host).get('status'):
@@ -596,13 +1085,31 @@ class System(object):
                 }
                 rq_obj = requests.get(rq_url, params=params)
                 rq_result = json.loads(rq_obj.text)
+                node_err_message = rq_result.get('errMessage')
+                if not node_err_message:
+                    err_message = node_err_message + rq_result.get('errMessage') + '\n'
             except ConnectionError:
+                # 连接失败, 该节点标记为失败
+                node_status_code = 6
                 _logger.write(str(node_host) + '连接失败', 'warn')
-                rq_result = {'message': 'node connect error', 'status': False}
-            system_info_list.update({node_host: rq_result})
-        return system_info_list
+                err_message = err_message + '\'' + str(node_host) + '\'连接失败\n'
+                rq_result = {
+                    'message': None,
+                    'statusCode': node_status_code,
+                    'errMessage': err_message
+                }
+                # 存在失败情况
+            if rq_result.get('statusCode') > 0:
+                # 设置整体statusCode为1
+                status_code = 1
+            system_info_list.append({
+                'host': node_host,
+                'message': rq_result
+            })
+        return status_code, system_info_list, err_message
 
     @staticmethod
+    @host_validation
     def get_system(host, type_):
         """获取单个节点系统信息
 
@@ -612,17 +1119,9 @@ class System(object):
         :param type_: 查询种类
         :return: [] or None
         """
-        system_list = None
         _allow_type = ['mem', 'disk', 'cpu']
         if type_ not in _allow_type:
-            return {'message': 'type error', 'status': False}
-        cluster_status = Gl.get_value('CLUSTER_STATUS_VAR', {})
-        cluster_all_hosts = Gl.get_value('CLUSTER_ALL_HOSTS_VAR', [])
-        if host not in cluster_all_hosts:
-            _logger.write('节点Host: \'' + host + '\'无效', level='warn')
-            return {'message': 'host not found', 'status': False}
-        if host not in cluster_status or not cluster_status.get(host).get('status'):
-            return {'message': 'host unavailable', 'status': False}
+            return {'errMessage': '函数参数异常', 'statusCode': 3, 'message': None}
         rq_url = _root_url.format(
             host=host,
             port=SLAVE_SERVICE_PORT_VAR,
@@ -630,10 +1129,6 @@ class System(object):
             type_path=''
         )
         rq_args = {'type': type_}
-        try:
-            rq_obj = requests.get(rq_url, params=rq_args)
-            system_list = json.loads(rq_obj.text)
-        except ConnectionError:
-            _logger.write(str(host) + '连接失败', 'warn')
-            system_list = {'message': 'host connect fail', 'status': False}
+        rq_obj = requests.get(rq_url, params=rq_args)
+        system_list = json.loads(rq_obj.text)
         return system_list

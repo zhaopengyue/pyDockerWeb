@@ -13,7 +13,7 @@ from etc.core_var import GLOBAL_VAL_FILE_PATH
 
 
 def md5_salt(message):
-    """对传如的message加salt处理
+    """对传入的message加salt处理
     :param message: 要加密的字符串
     :return:
     """
