@@ -95,8 +95,8 @@
         ],
         "action": "remove",
         "images": [
-        	"镜像ID1"，
-            "镜像ID2"
+        	"镜像名1"，
+            "镜像名2"
         ],
         "args" {
         	"force": "是否强制删除(boolean)"
@@ -124,7 +124,7 @@
     ```
     - 说明
     ```
-    post请求中host与imageID是一致的，需保证imageId必须在host上,故host可以重复。
+    post请求中host与imageID是一致的，需保证镜像名必须在host上,故host可以重复。
     返回信息中可通过message中的host与image查看具体某个镜像的执行状态。message中的字典顺序与传入时的顺序相同。
     ```
     
@@ -197,6 +197,37 @@
                     "errMessage": "错误信息"
                 },
                 "repository": "镜像1"
+            },
+            {}
+        ],
+        "statusCode": "错误码",
+        "errMessage": "错误信息"
+    }
+    ```
+    
+#### 删除所选节点所有镜像
+1. 删除所选节目镜像
+	- method: `POST`
+	- post参数: 
+	```
+    {
+    	"hosts": [
+        	"127.0.0.1"
+        ]
+    }
+    ```
+    - url: `/image/remove_all/`
+    - return:
+    ```
+   {
+    	"message": [
+        	{
+            	"host": "192.168.1.1",
+                "message": {
+                	"message": "ok",
+                    "statusCode": "错误码",
+                    "errMessage": "错误信息"
+                }
             },
             {}
         ],

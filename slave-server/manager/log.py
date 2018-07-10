@@ -38,7 +38,8 @@ class Logging(object):
         :param level: 日志等级
         :return:
         """
-        info = info.decode('utf-8')
+        if not isinstance(info, unicode):
+            info = info.decode('utf-8')
         if level == 'info':
             self.logger.info(info)
         elif level == 'warn':

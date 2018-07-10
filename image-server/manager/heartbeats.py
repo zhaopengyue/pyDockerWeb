@@ -112,8 +112,8 @@ class ImageHeartbeats(threading.Thread):
 
 def start_heartbeats():
     print '心跳服务运行中'
-    _logger.write('心跳检测服务已启动', level='info')
+    _logger.write(u'心跳检测服务已启动', level='info')
     heartbeat = ImageHeartbeats()
     heartbeat.setDaemon(True)
     heartbeat.start()
-    print '心跳服务已启动'
+    print u'心跳服务已启动'

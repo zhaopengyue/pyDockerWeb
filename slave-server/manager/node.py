@@ -49,7 +49,7 @@ def parameter_validation(func):
 
     def wrapper(self, id_, *args, **kwargs):
         if not isinstance(id_, str):
-            return {'message': None, 'statusCode': 3, 'errMessage': 'id_ must be str'}
+            return {'message': None, 'statusCode': 3, 'errMessage': 'image id must be str'}
         if 'timeout' in kwargs:
             if not isinstance(kwargs.get('timeout'), int):
                 return {'message': None, 'statusCode': 3, 'errMessage': 'timeout must be int'}
@@ -104,14 +104,14 @@ class System(object):
                 physical_cpu_core_num = 0
         except Exception:
             physical_cpu_core_num = 0
-            err_message += '每个cpu核数读取失败;'
+            err_message += u'每个cpu核数读取失败;'
             status_code = 1
         try:
             processor_core_num = os.popen(processor_core_num_cmd).read().split('\n')[0]
             if not processor_core_num:
                 processor_core_num = 0
         except Exception:
-            err_message += '逻辑cpu核数读取失败;'
+            err_message += u'逻辑cpu核数读取失败;'
             status_code = 1
             processor_core_num = 0
         cpu_info = {
@@ -167,7 +167,7 @@ class System(object):
         except Exception:
             mem_info = None
             status_code = 2
-            err_message = '内存读取过程中失败'
+            err_message = u'内存读取过程中失败'
         _log.write(mem_info.__str__())
         return {'message': mem_info, 'statusCode': status_code, 'errMessage': err_message}
 
@@ -251,15 +251,15 @@ class Containers(object):
             exec_result = self.get_info(str(container.id))
             if exec_result.get('statusCode') != 0:
                 status_code = 1
-                err_message = container.id + '信息获取失败;'
+                err_message = container.id + u'信息获取失败;'
             containers_info.append(exec_result)
         _log.write(containers_info.__str__())
-        _log.write(status_code)
+        _log.write(str(status_code))
         _log.write(err_message)
         return {'message': containers_info, 'statusCode': status_code, 'errMessage': err_message}
 
-    @format_error
     @parameter_validation
+    @format_error
     def get_info(self, id_):
         """ 获取单个容器信息
 
@@ -350,8 +350,8 @@ class Containers(object):
             date = status
         return date
 
-    @format_error
     @parameter_validation
+    @format_error
     def kill(self, id_, signal=None):
         """ 杀死容器或向容器发送信号
 
@@ -379,8 +379,8 @@ class Containers(object):
         container_obj.start()
         return {'message': 'ok', 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def stop(self, id_, timeout=10):
         """ 停止容器
 
@@ -394,8 +394,8 @@ class Containers(object):
         container_obj.stop(timeout=timeout)
         return {'message': 'ok', 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def restart(self, id_, timeout=10):
         """ 停止容器
 
@@ -409,8 +409,8 @@ class Containers(object):
         container_obj.restart(timeout=timeout)
         return {'message': 'ok', 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def rename(self, id_, new_name):
         """ 重命名容器
 
@@ -426,8 +426,8 @@ class Containers(object):
         container_obj.rename(new_name)
         return {'message': 'ok', 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def pause(self, id_):
         """ 启动容器
 
@@ -440,8 +440,8 @@ class Containers(object):
         container_obj.pause()
         return {'message': 'ok', 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def unpause(self, id_):
         """ 启动容器
 
@@ -454,8 +454,8 @@ class Containers(object):
         container_obj.unpause()
         return {'message': 'ok', 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def logs(self, id_, **kwargs):
         """ 获取容器日志
 
@@ -470,8 +470,8 @@ class Containers(object):
         info = container_obj.logs(**kwargs)
         return {'message': info, 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def commit(self, id_, repository=None, tag=None, **kwargs):
         """ 构建一个容器为镜像
 
@@ -491,8 +491,8 @@ class Containers(object):
         container_obj.commit(repository=repository, tag=tag, **kwargs)
         return {'message': 'ok', 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def remove(self, id_, **kwargs):
         """ 删除容器, 类似于
 
@@ -530,7 +530,7 @@ class Containers(object):
         if not container:
             return {'message': None, 'statusCode': 2, 'errMessage': 'create error. please check again'}
         container_id = container.split('\n')[0]
-        _log.write(container_id)
+        _log.write(str(container_id))
         # 检测是否创建成功
         status = True
         try:
@@ -590,12 +590,12 @@ class Images(object):
             image_info = self.get_info(str(image.id))
             if image_info.get('statusCode') != 0:
                 status_code = 1
-                err_message = image.id + '获取信息失败'
+                err_message = image.id + u'获取信息失败'
             images_info.append(image_info)
         return {'message': images_info, 'statusCode': status_code, 'errMessage': err_message}
 
-    @format_error
     @parameter_validation
+    @format_error
     def get_info(self, id_):
         """ 获取单个镜像信息
 
@@ -626,8 +626,8 @@ class Images(object):
         }
         return {'message': image_info, 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def remove(self, id_, force=False):
         """ 删除镜像
 
@@ -646,6 +646,20 @@ class Images(object):
         if force:
             noprune = True
         self.client.images.remove(image=id_, force=force, noprune=noprune)
+        return {'message': 'ok', 'statusCode': 0}
+
+    @format_error
+    def remove_all(self, force=True):
+        """ 一次性删除本节点所有镜像
+
+        类似于```docker rmi `docker images -q` ```
+
+        :param force: 是否强制删除 默认为true
+        :return:
+        """
+        for image in self.client.images.list(all=True):
+            image_id = str(image.id)
+            self.remove(image_id, force)
         return {'message': 'ok', 'statusCode': 0}
 
     @format_error
@@ -671,7 +685,7 @@ class Images(object):
             exec_result = self.remove(image, force)
             if 0 != exec_result.get('statusCode'):
                 status_code = 1
-                err_message = image.id + '删除失败;'
+                err_message = image.id + u'删除失败;'
             remove_status.append({image: exec_result})
         return {'message': remove_status, 'statusCode': status_code, 'errMessage': err_message}
 
@@ -735,8 +749,8 @@ class Images(object):
         """
         return {'message': self.client.images.search(*args, **kwargs), 'statusCode': 0}
 
-    @format_error
     @parameter_validation
+    @format_error
     def tag(self, id_, repository, tag=None, **kwargs):
         """ 修改镜像名
 

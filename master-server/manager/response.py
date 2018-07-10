@@ -22,7 +22,7 @@ _container = Container()
 _system = System()
 # 日志操作实例
 _logger = Logging('web_flask')
-_logger.set_file('web_flask.txt')
+_logger.set_file('web_flask.log')
 
 
 @app.route('/')
@@ -281,21 +281,23 @@ def container_info():
     """
     # cluster_id = '127.0.0.1'
     args = request.get_json()
+    if not args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     cluster_id = args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
         _logger.write('container_info: ' + str(cluster_id) + ' is illegal or not found node in cluster')
-        return jsonify({'errMessage': str(cluster_id) + '集群IP不合法或无加入节点', 'statusCode': 5, 'message': None})
-    container_info = _container.get_all_containers(cluster_id)
+        return jsonify({'errMessage': str(cluster_id) + u'集群IP不合法或无加入节点', 'statusCode': 5, 'message': None})
+    containers_info = _container.get_all_containers(cluster_id)
     info = []
     # 存在致命错误
-    if container_info.get('statusCode') > 1:
+    if containers_info.get('statusCode') > 1:
         return jsonify({
-            'errMessage': container_info.get('errMessage'),
+            'errMessage': containers_info.get('errMessage'),
             'message': None,
-            'statusCode': container_info.get('statusCode')
+            'statusCode': containers_info.get('statusCode')
         })
-    container_messages = container_info.get('message')
+    container_messages = containers_info.get('message')
     for node in container_messages:
         host = node.get('host')
         container_message_message = node.get('message')
@@ -326,6 +328,8 @@ def container_info():
 def container_info_list():
     # cluster_id = '127.0.0.1'
     args = request.get_json()
+    if not args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     hosts = args.get('hosts')
     container_info = _container.get_all_containers_by_list(hosts)
     info = []
@@ -379,20 +383,21 @@ def container_op():
     }
     """
     rq_args = request.get_json()
+    if not rq_args:
+        return jsonify({'errMessage': '未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
         _logger.write('container_op: ' + str(cluster_id) + ' is illegal or not found node in cluster')
-        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
-    host_name = rq_args.get('node')
+        return jsonify({'message': cluster_id + u'集群IP不合法或无加入节点'})
+    host = rq_args.get('node')
     # type_为元祖,原因未知
     type_ = rq_args.get('action'),
     container_id = rq_args.get('container_id')
     args = rq_args.get('args')
-    host = node_name_address(cluster_id, host_name)
     if not host:
-        _logger.write(str(host_name) + ' not found', level='error')
-        return jsonify({'message': str(host_name) + ' not found', 'status': False})
+        _logger.write(str(host) + ' not found', level='error')
+        return jsonify({'errMessage': u'host值为空', 'statusCode': 4, 'message': None})
     result = _container.operator_container(host, action_type=type_[0], container_id_or_name=container_id, **args)
     return jsonify(result)
 
@@ -404,6 +409,8 @@ def container_op_list():
     :return:
     """
     rq_args = request.get_json()
+    if not rq_args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     hosts = rq_args.get('hosts')
     action_type = rq_args.get('action')
     containers = rq_args.get('containers')
@@ -428,11 +435,13 @@ def container_create():
     }
     """
     rq_args = request.get_json()
+    if not rq_args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
         _logger.write('container_create: ' + str(cluster_id) + ' is illegal or not found node in cluster')
-        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
+        return jsonify({'message': str(cluster_id) + u'集群IP不合法或无加入节点'})
     host_name = rq_args.get('node')
     create_cmd = rq_args.get('cmd')
     host = node_name_address(cluster_id, host_name)
@@ -530,6 +539,8 @@ def image_info():
     }
     """
     args = request.get_json()
+    if not args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     cluster_id = args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
@@ -539,15 +550,15 @@ def image_info():
     info = []
     image_use_dict = {}
     image_use_list = set()
-    container_info = _container.get_all_containers(cluster_id)
-    if container_info.get('statusCode') > 1 or images_info.get('statusCode') > 1:
+    containers_info = _container.get_all_containers(cluster_id)
+    if containers_info.get('statusCode') > 1 or images_info.get('statusCode') > 1:
         return jsonify({
-            'errMessage': container_info.get('errMessage'),
+            'errMessage': containers_info.get('errMessage'),
             'message': None,
-            'statusCode': container_info.get('statusCode')
+            'statusCode': containers_info.get('statusCode')
         })
-    for node in container_info.get('message'):
-        host = node.get('message')
+    for node in containers_info.get('message'):
+        host = node.get('host')
         container_message = node.get('message')
         if container_message.get('statusCode') > 1:
             continue
@@ -558,7 +569,7 @@ def image_info():
             image_use_list.add(container_image)
         image_use_dict.update({host: image_use_list})
     for node in images_info:
-        host = node.get('message')
+        host = node.get('host')
         image_message = node.get('message')
         if image_message.get('statusCode') > 1:
             continue
@@ -587,20 +598,29 @@ def image_info():
 @app.route('/image/info_list/', methods=['POST'])
 def image_info_list():
     args = request.get_json()
+    if not args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     hosts = args.get('hosts')
-    images_info = _image.get_all_images_by_list(hosts)
+    # images_info = _image.get_all_images_by_list(hosts)
     info = []
     image_use_dict = {}
     image_use_list = set()
-    container_info = _container.get_all_containers(hosts)
-    if container_info.get('statusCode') > 1 or images_info.get('statusCode') > 1:
+    containers_info = _container.get_all_containers_by_list(hosts)
+    images_info = _image.get_all_images_by_list(hosts)
+    if containers_info.get('statusCode') > 1:
         return jsonify({
-            'errMessage': container_info.get('errMessage'),
-            'message': None,
-            'statusCode': container_info.get('statusCode')
+            'errMessage': containers_info.get('errMessage'),
+            'statusCode': containers_info.get('statusCode'),
+            'message': None
         })
-    for node in container_info.get('message'):
-        host = node.get('message')
+    if images_info.get('statusCode') > 1:
+        return jsonify({
+            'errMessage': images_info.get('errMessage'),
+            'statusCode': images_info.get('statusCode'),
+            'message': None
+        })
+    for node in containers_info.get('message'):
+        host = node.get('host')
         container_message = node.get('message')
         if container_message.get('statusCode') > 1:
             continue
@@ -610,15 +630,15 @@ def image_info_list():
                 container_image += ':latest'
             image_use_list.add(container_image)
         image_use_dict.update({host: image_use_list})
-    for node in images_info:
-        host = node.get('message')
+    for node in images_info.get('message'):
+        host = node.get('host')
         image_message = node.get('message')
         if image_message.get('statusCode') > 1:
             continue
         for image in image_message.get('message'):
             short_id = image.get('message').get('short_id')
             created = image.get('message').get('created')
-            size = str(round(float(image.get('message').get('size')) / 1024 / 1024, 2)) + ' M'
+            size = str(round(float(image.get('message').get('size')) / 1024 / 1024, 2)) + 'M'
             os_ = image.get('message').get('os')
             for tag in image.get('message').get('tags'):
                 if tag in image_use_dict.get(host):
@@ -627,7 +647,7 @@ def image_info_list():
                     status = 'NoUse'
                 info.append({
                     'short_id': short_id,
-                    'node': node,
+                    'node': host,
                     'tag': tag,
                     'created': created,
                     'size': size,
@@ -654,11 +674,13 @@ def image_operator():
     :return:
     """
     rq_args = request.get_json()
+    if not rq_args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     cluster_id = rq_args.get('cluster_id')
     all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     if cluster_id not in all_cluster_id:
         _logger.write('image_operator: ' + str(cluster_id) + ' is illegal or not found node in cluster')
-        return jsonify({'message': str(cluster_id) + '集群IP不合法或无加入节点'})
+        return jsonify({'message': str(cluster_id) + u'集群IP不合法或无加入节点'})
     host_name = rq_args.get('node')
     # type_为元祖,原因未知
     type_ = rq_args.get('action'),
@@ -675,11 +697,23 @@ def image_operator():
 @app.route('/image/operator_list/', methods=['POST'])
 def image_op_list():
     rq_args = request.get_json()
+    if not rq_args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     hosts = rq_args.get('hosts')
     action_type = rq_args.get('action')
     images = rq_args.get('images')
     args = rq_args.get('args')
-    op_result = _image.get_all_images_by_list(hosts, action_type, images, **args)
+    op_result = _image.operator_images_by_list(hosts, action_type, images, **args)
+    return jsonify(op_result)
+
+
+@app.route('/image/remove_all/', methods=['POST'])
+def image_remove_all():
+    rq_args = request.get_json()
+    if not rq_args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
+    hosts = rq_args.get('hosts')
+    op_result = _image.remove_all_images(hosts)
     return jsonify(op_result)
 
 
@@ -857,15 +891,16 @@ def node_image_server_harbor():
     :return:
     """
     rq_args = request.get_json()
+    if not rq_args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     # cluster_id = rq_args.get('cluster_id')
-    all_cluster_id = Gl.get_value('CLUSTER_FREE_ID_VAR', [])
     # if cluster_id not in all_cluster_id:
     #     _logger.write('node_image_server_harbor: ' + str(cluster_id) + ' is illegal or not found node in cluster')
     #     return jsonify({'errMessage': str(cluster_id) + '集群IP不合法或无加入节点', 'statusCode': 5, 'message': None})
     image_server = rq_args.get('image_server')
     if not image_server:
         _logger.write('node_image_server_registry: ' + str(image_server) + ' is illegal')
-        return jsonify({'errMessage': '镜像节点不在线或不合法', 'statusCode': 7, 'message': None})
+        return jsonify({'errMessage': u'镜像节点不在线或不合法', 'statusCode': 7, 'message': None})
     info = _image.get_image_server_harbor(image_server)
     return jsonify(info)
     # return jsonify({'message': info, 'statusCode': 0, 'errMessage': None})
@@ -904,6 +939,8 @@ def node_download_list():
     :return:
     """
     rq_args = request.get_json()
+    if not rq_args:
+        return jsonify({'errMessage': u'未收到json数据,请添加json请求头', 'message': None, 'statusCode': 4})
     to_hosts = rq_args.get('to_hosts')
     images = rq_args.get('images')
     image_server = rq_args.get('image_server')
@@ -921,7 +958,7 @@ def get_alive_server_list():
 
     :return:
     """
-    return Image.get_alive_image_server_list()
+    return jsonify(Image.get_alive_image_server_list())
     # message = Image.get_alive_image_server_list()
     # if message.get('status'):
     #     return jsonify({'message': message, 'statusCode': 0, 'errMessage': None})

@@ -68,7 +68,7 @@ class Container(Resource):
         self.reqparse.add_argument('force', type=bool)
         super(Container, self).__init__()
 
-    def get(self, id_):
+    def get(self):
         """ 获取容器信息
 
         :return:
@@ -79,7 +79,8 @@ class Container(Resource):
         "url":
         }
         """
-        id_ = str(id_)
+        args = self.reqparse.parse_args()
+        id_ = args.get('container_id_or_name')
         message = CONTAINER_OBJ.get_info(id_)
         message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('container', id_=id_, _external=True)})
         return message
@@ -184,13 +185,14 @@ class Image(Resource):
         self.reqparse.add_argument('repositories', type=list)
         self.reqparse.add_argument('repository', type=str)
 
-    def get(self, id_):
-        id_ = str(id_)
+    def get(self):
+        args = self.reqparse.parse_args()
+        id_ = args.get('image_id_or_name')
         message = IMAGE_OBJ.get_info(id_)
         message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('image', _external=True)})
         return message
 
-    def post(self, id_):
+    def post(self):
         args = self.reqparse.parse_args()
         image_id_or_name = args.get('image_id_or_name')
         type_ = args.get('type')
@@ -199,6 +201,11 @@ class Image(Resource):
             if not force:
                 force = False
             message = IMAGE_OBJ.remove(image_id_or_name, force)
+        elif type_ == 'remove_all':
+            force = args.get('force', True)
+            if not force:
+                force = True
+            message = IMAGE_OBJ.remove_all(force)
         elif type_ == 'remove_list':
             images_list = args.get('repositories')
             force = args.get('force', False)
@@ -237,7 +244,7 @@ class Sys(Resource):
     def __init__(self):
         super(Sys, self).__init__()
         self.reqparse = reqparse.RequestParser()
-        self.reqparse.add_argument('type', type=str, required=True, help='参数为系统信息类型(disk or mem or cpu)')
+        self.reqparse.add_argument('type', type=str, required=True, help=u'参数为系统信息类型(disk or mem or cpu)')
 
     def get(self):
         args = self.reqparse.parse_args()
@@ -257,7 +264,9 @@ class Sys(Resource):
         message.update({'refresh': datetime.datetime.now().strftime('%c'), 'url': url_for('system', _external=True)})
         return message
 
-    def post(self, type_):
+    def post(self):
+        args = self.reqparse.parse_args()
+        type_ = args.get('type')
         if type_ == 'mem':
             message = System.get_mem_info()
         elif type_ == 'disk':
