@@ -593,9 +593,9 @@ def image_info():
             os_ = image.get('message').get('os')
             for tag in image.get('message').get('tags'):
                 if tag in image_use_dict.get(host):
-                    status = 'Using'
+                    status = '<span class="label label-danger">&nbsp;&nbsp;Using&nbsp;&nbsp;</span>'
                 else:
-                    status = 'NoUse'
+                    status = '<span class="label label-success">&nbsp;&nbsp;NoUse&nbsp;&nbsp;</span>'
                 info.append({
                     'short_id': short_id,
                     'node': node,
@@ -655,9 +655,9 @@ def image_info_list():
             os_ = image.get('message').get('os')
             for tag in image.get('message').get('tags'):
                 if tag in image_use_dict.get(host):
-                    status = 'Using'
+                    status = '<span class="label label-danger">&nbsp;&nbsp;Using&nbsp;&nbsp;</span>'
                 else:
-                    status = 'NoUse'
+                    status = '<span class="label label-success">&nbsp;&nbsp;NoUse&nbsp;&nbsp;</span>'
                 info.append({
                     'short_id': short_id,
                     'node': host,
@@ -940,7 +940,7 @@ def node_download():
         _logger.write('node_download: ' + str(image_server) + ' is illegal')
         return jsonify({'errMessage': 'image server is error', 'statusCode': 7})
     message = _image.download_image(to_host, str(image_server), str(image_name))
-    return jsonify({'message': message, 'status': True})
+    return jsonify({'errMessage': message, 'statusCode': 0, 'message': None})
 
 
 @app.route('/node/download_list/', methods=['POST'])
@@ -959,7 +959,7 @@ def node_download_list():
     image_server = rq_args.get('image_server')
     if not image_server:
         _logger.write('node_download: ' + str(image_server) + ' is illegal')
-        return jsonify({'message': 'image server is error', 'status': False})
+        return jsonify({'errMessage': 'image server is error', 'statusCode': 7, 'message': None})
     message = _image.download_images_by_list(to_hosts, image_server, images)
     return jsonify(message)
     # return jsonify({'message': message, 'statusCode': 0, 'errMessage': None})
