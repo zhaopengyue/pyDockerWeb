@@ -5,7 +5,7 @@
 """
 import sys
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from log import Logging
 from tools import GlobalMap as Gl
 from manager.communication import Image
@@ -25,7 +25,20 @@ _logger = Logging('web_flask')
 _logger.set_file('web_flask.log')
 
 
-@app.route('/')
+@app.after_request
+def make_response_access(exec_result):
+    """ 解决跨域请求
+
+    :return:
+    """
+    res = make_response(exec_result)
+    res.headers['Access-Control-Allow-Origin'] = '*'
+    res.headers['Access-Control-Allow-Methods'] = 'POST，GET,OPTIONS'
+    res.headers['Access-Control-Allow-Headers'] = 'x-requested-with,content-type'
+    return res
+
+
+@app.route('/ajax/', methods=['POST', 'GET'])
 def hello_world():
     return 'Hello World!'
 

@@ -1,14 +1,14 @@
 ### 消息返回基本格式
-``` 
+``` json 
 {
-	"message":  具体执行结果值,失败时值为None(null),  相关类型,
-    "statusCode": 执行状态码, int
-    "errMessage": 错误信息, 成功时为None(null)。 str
+    "message":  "具体执行结果值,失败时值为None(null),  相关类型",
+    "statusCode": "执行状态码, int",
+    "errMessage": "错误信息, 成功时为None(null)。 str"
 }
 ```
 
 ### statusCode列表
- ** 状态码为1时，为便于遍历, 相关失败值会以`0`或`''`展示**
+ **状态码为1时，为便于遍历, 相关失败值会以`0`或`''`展示**
 - 0 所有任务都已经执行成功
 - 1 任务已经完成,但结果中存在执行不成功的结果。
 - 2 任务执行出错
@@ -28,16 +28,16 @@
 	- post参数: 
 	``` json
     {
-    	"cluster_id": 主节点IP(str)
+        "cluster_id": 主节点IP(str)
     }
     ```
 	- return: 
 	``` json
-   {
-   		"statusCode": "状态码(str)",
-    	"message": [
-        	{
-            	"short_id": "镜像ID",
+    {
+        "statusCode": "状态码(str)",
+        "message": [
+            {
+                "short_id": "镜像ID",
                 "node": "节点IP",
                 "tag": "镜像标签",
                 "created": "创建时间",
@@ -47,8 +47,8 @@
             },
             {}
         ],
-        "errMessage": "错误信息"
-   }
+    "errMessage": "错误信息"
+    }
     ```
 2. 通过IP数组获取
 	- method: `POST`
@@ -56,19 +56,19 @@
 	- post参数: 
 	```
     {
-    	"hosts": [
-        	"192.168.1.1",
+        "hosts": [
+            "192.168.1.1",
             "192.168.1.2"
         ]
     }
     ```
 	- return: 
 	``` json
-     {
-   		"statusCode": "状态码(str)",
+    {
+        "statusCode": "状态码(str)",
         "message": [
         	{
-            	"short_id": "镜像ID",
+                "short_id": "镜像ID",
                 "node": "节点IP",
                 "tag": "镜像标签",
                 "created": "创建时间",
@@ -89,28 +89,28 @@
 	- post参数:
 	``` json
     {
-    	"hosts": [
-        	"192.168.1.1",
+        "hosts": [
+            "192.168.1.1",
             "192.168.1.2"
         ],
         "action": "remove",
         "images": [
-        	"镜像名1"，
+            "镜像名1",
             "镜像名2"
         ],
-        "args" {
-        	"force": "是否强制删除(boolean)"
-        }: 
+        "args": {
+            "force": "是否强制删除(boolean)"
+        }
     }
     ```
     - return:
     ``` json
     {
-    	"message": [
-        	{
-            	"host": "节点IP",
+        "message": [
+            {
+                "host": "节点IP",
                 "message": {
-                	"message": "ok",
+                    "message": "ok",
                     "statusCode": "错误码",
                     "errMessage": "错误信息"
                 },
@@ -135,9 +135,9 @@
 	- return: 
 	``` json
     {
-    	"errMessage": "错误信息",
+        "errMessage": "错误信息",
         "message": [
-        	"192.168.1.1",
+            "192.168.1.1",
             "192.168.1.2"
         ],
         "statusCode": "错误码"
@@ -149,15 +149,15 @@
 	- post参数: 
 	```
     {
-    	"image_server": "镜像服务器IP"
+        "image_server": "镜像服务器IP"
     }
     ```
 	- return
 	```
     {
-    	"message": [
+        "message": [
         	{
-            	"name": "镜像名",
+                "name": "镜像名",
                 "description": "描述",
                 "pull_count": "pull次数",
                 "star_count": "star个数",
@@ -174,12 +174,12 @@
 	- post参数: 
 	```
     {
-    	"to_hosts": [
-        	"192.168.1.1",
+        "to_hosts": [
+            "192.168.1.1",
             "192.168.1.2"
         ],
         "images": [
-        	"镜像1"，
+            "镜像1"，
             "镜像2"
         ]，
         "image_server": "镜像服务器IP"
@@ -190,9 +190,9 @@
     {
     	"message": [
         	{
-            	"host": "192.168.1.1",
+                "host": "192.168.1.1",
                 "message": {
-                	"message": "ok",
+                    "message": "ok",
                     "statusCode": "错误码",
                     "errMessage": "错误信息"
                 },
@@ -211,8 +211,8 @@
 	- post参数: 
 	```
     {
-    	"hosts": [
-        	"127.0.0.1"
+        "hosts": [
+            "127.0.0.1"
         ]
     }
     ```
@@ -221,10 +221,10 @@
     ```
    {
     	"message": [
-        	{
-            	"host": "192.168.1.1",
+            {
+                "host": "192.168.1.1",
                 "message": {
-                	"message": "ok",
+                    "message": "ok",
                     "statusCode": "错误码",
                     "errMessage": "错误信息"
                 }

@@ -692,7 +692,7 @@ class Image(object):
                 'host': host,
                 'message': rq_result
             })
-            return status_code, images_list, err_message
+        return status_code, images_list, err_message
 
     @staticmethod
     @host_validation
