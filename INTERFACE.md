@@ -28,7 +28,7 @@
 	- post参数: 
 	``` json
     {
-        "cluster_id": 主节点IP(str)
+        "cluster_id": "主节点IP(str)"
     }
     ```
 	- return: 
