@@ -14,4 +14,3 @@ if __name__ == '__main__':
         start_response()
     except KeyboardInterrupt:
         _logger.write('服务已停止', level='info')
-        print 'Exited, OK'

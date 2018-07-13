@@ -1,12 +1,11 @@
 ## 集群部署指南
 
 ### 部署注意事项
-1. 由于本系统采用DHCP，各个节点采用动态加入机制，整个集群只有DHCP服务节点的IP固定。为便于部署及访问，建议将nginx服务，DHCP服务及主服务部署在同一个节点上。
-2. harbor私有仓库建议部署在一台单独的，采用x86架构的PC机上。
-3. 本系统必须在各节点docker启动后运行，负责会出错。
-4. 以下安装过程以debian类型系统为例
-5. 开发环境中python版本为python2.7.11,请安装合适的python保证运行环境正确
-6. 为避免python环境污染，请按条件选择安装使用virtualenv。若使用了virtualenv，则需要在`作为一个服务`中添加source语句和指定python路径
+1. harbor私有仓库建议部署在一台单独的，采用x86架构的PC机上。
+2. 本系统必须在各节点docker启动后运行，负责会出错。
+3. 以下安装过程以debian类型系统为例
+4. 开发环境中python版本为python2.7.11,请安装合适的python保证运行环境正确
+5. 为避免python环境污染，请按条件选择安装使用virtualenv。若使用了virtualenv，则需要在`作为一个服务`中添加source语句和指定python路径
    
 ### 集群各服务搭建
 > 包含[项目](https://github.com/zhaopengyue/pyDockerWeb)中的'master-server, slave-server, image-server'三部分  
@@ -101,27 +100,7 @@ sudo cat > /etc/docker/daemon.json << EOF
 ### 作为一个服务
 > 为便于服务运行，故给服务部署自启，自启动服务使用systemctl部署。
 
-1. nginx服务自启动配置		
-```
-sudo vim /etc/systemd/system/pyDockerNginx.service
-# 文件中添加如下项---------------------
-[Unit]
-Description=pyDockerWeb nginx web server
-After=network.target remote-fs.target nss-lookup.target
-[Service]
-Type=forking
-ExecStart=/bin/bash -c "/usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf"
-ExecReload=/bin/bash -c "/usr/local/nginx/sbin/nginx -s reload"
-ExecStop=/bin/bash -c "/usr/local/nginx/sbin/nginx -s stop"
-[Install]
-WantedBy=multi-user.target
-# -----------------------------------
-# 开启服务
-sudo systemctl start pyDockerNginx.service
-# 添加开机自启动
-sudo systemctl enable pyDockerNginx.service
-```
-2. 集群各服务开机自启配置(以master-server为例，slave-server和image-server同此)
+集群各服务开机自启配置(以master-server为例，slave-server和image-server同此)
 ``` shell
 sudo vim /etc/systemd/system/pyDockerMaster.service
 # 文件中添加如下项--------------------------------

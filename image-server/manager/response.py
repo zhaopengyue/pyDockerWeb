@@ -63,6 +63,5 @@ def start_response():
 
     :return:
     """
-    print '镜像服务器运行中...'
     APP.run(port=IMAGE_SERVICE_PORT_VAR, host=THE_MACHINE_IP)
 
